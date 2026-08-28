@@ -76,7 +76,10 @@ cp .env.example .env
 
 # 2a. Прод-режим (сборка + фон)
 docker compose up --build -d
-#    открыть https://localhost:8443   (HTTP на :8080 редиректит сюда же)
+#    открыть НАПРЯМУЮ https://localhost:8443
+#    (заход на http://localhost:8080 отдаёт 308 на https://localhost/ — без :8443,
+#     т.к. Caddy внутри знает только про порт 443 и не в курсе о ремапе хоста;
+#     на нестандартном порту всегда открывать https://...:8443 руками)
 #    сертификат localhost подписан внутренним CA Caddy — в браузере
 #    один раз подтвердить доверие (или импортировать корень из тома caddy_data)
 
@@ -304,8 +307,10 @@ ENV TZ=Europe/Moscow
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/dist /srv
 EXPOSE 80 443
+# admin-API Caddy слушает 127.0.0.1:2019 (IPv4) — адрес указываем явно,
+# иначе busybox wget уходит в ::1 и получает Connection refused
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --start-interval=3s --retries=3 \
-  CMD wget -q -O /dev/null http://localhost:2019/config/ || exit 1
+  CMD wget -q -O /dev/null http://127.0.0.1:2019/config/ || exit 1
 ```
 
 ### Пояснение
@@ -332,8 +337,9 @@ Node `^22.18 || >=24.12` — тег `node:22-alpine` этому удовлетв
 - `COPY --from=build /app/dist /srv` — только собранная статика (в Caddyfile
   `root * /srv`). Ни Node, ни node_modules в финальном образе нет.
 - `EXPOSE 80 443` — HTTP (редирект + ACME) и HTTPS.
-- `HEALTHCHECK` — `wget` дёргает локальный admin-API Caddy на `:2019` (всегда
-  слушает внутри контейнера): первые 10 с (`start-period`) проверки не считаются
+- `HEALTHCHECK` — `wget` дёргает локальный admin-API Caddy на `127.0.0.1:2019`
+  (он всегда слушает внутри контейнера, но только на IPv4 — поэтому адрес задан
+  явно, не `localhost`): первые 10 с (`start-period`) проверки не считаются
   фатальными и идут чаще (`start-interval=3s`) для быстрого перехода в `healthy`,
   дальше — раз в 30 с; при 3 неудачах подряд контейнер помечается `unhealthy`.
   `caddy:alpine` содержит `wget` (busybox).
@@ -729,6 +735,9 @@ docker compose config                 # итоговый (смёрженный) 
 | Изменил код, но в контейнере старое | Прод-образ не следит за файлами — нужен `docker compose build`. Для live-правок — dev-overlay. |
 | `502` / `Bad Gateway` на `/api/...` | `backend` не запущен или упал: `docker compose logs backend`. Caddy проксирует на `backend:3000`. |
 | Пустая страница, 404 при перезагрузке на вложенном маршруте | Проверить блок `handle { try_files … /index.html }` в `Caddyfile` (SPA-fallback). |
+| `http://localhost:8080` редиректит на `https://localhost/` и «не открывается» | Caddy отдаёт 308 на порт 443, про ремап хоста `8443:443` он не знает. Открывать `https://localhost:8443` (или `https://<SITE_ADDRESS>:8443`) напрямую. |
+| В логах Caddy `Cannot issue for "…": Domain name needs at least one dot`, health висит `starting`/`unhealthy` | В `SITE_ADDRESS` указано голое слово без точки — Caddy принял его за публичный домен и ушёл в Let's Encrypt. Поставить `localhost`, `<имя>.localhost`, IP или настоящий FQDN; `docker compose up -d`. |
+| `frontend` вечно `health: starting` → `unhealthy`, в healthcheck `Connection refused` на `:2019` | admin-API Caddy слушает только IPv4. В HEALTHCHECK адрес должен быть `127.0.0.1:2019`, не `localhost:2019` (уже исправлено). |
 | Публичный домен: `could not get certificate` в логах Caddy | Домен не резолвится на сервер, либо порты 80/443 закрыты снаружи, либо упёрлись в rate limit Let's Encrypt. Проверить DNS и firewall; том `caddy_data` не удалять. |
 | Пересобрал фронт, браузер показывает старое | Хэши ассетов сменились, но `index.html` мог закэшироваться — hard-reload. |
 | Нужно начать БД с нуля | `docker compose down -v` удалит том `meeymirita_pgdata` (и `caddy_data`/`caddy_config` — сертификаты выпустятся заново). |

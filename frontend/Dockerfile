@@ -41,7 +41,8 @@ ENV TZ=Europe/Moscow
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/dist /srv
 EXPOSE 80 443
-# Проверка живости через локальный admin API Caddy (всегда на :2019 внутри)
+# Живость — через локальный admin-API Caddy. Он слушает 127.0.0.1:2019 (только
+# IPv4), поэтому адрес явный: с "localhost" busybox wget уходит в ::1 → refused.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --start-interval=3s --retries=3 \
-  CMD wget -q -O /dev/null http://localhost:2019/config/ || exit 1
+  CMD wget -q -O /dev/null http://127.0.0.1:2019/config/ || exit 1
 # CMD берётся из базового образа caddy: caddy run --config /etc/caddy/Caddyfile

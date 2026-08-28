@@ -1,8 +1,9 @@
 # Caddyfile — продакшн. Отдаёт собранный SPA и проксирует API.
-# HTTPS включается автоматически:
-#   • SITE_ADDRESS=localhost      → локальный внутренний CA Caddy (dev по HTTPS);
-#   • SITE_ADDRESS=reports.dom.ru → сертификат Let's Encrypt/ZeroSSL сам по ACME.
-# Значение приходит из окружения (см. .env / docker-compose.yml).
+# HTTPS включается автоматически по значению SITE_ADDRESS (приходит из окружения,
+# см. .env / docker-compose.yml). SITE_ADDRESS — это ХОСТ сайта, не имя проекта:
+#   • localhost / *.localhost / IP → локальный внутренний CA Caddy;
+#   • reports.company.ru (домен с точкой, резолвится) → Let's Encrypt/ZeroSSL по ACME.
+# Голое слово без точки уходит в Let's Encrypt и падает ("needs at least one dot").
 
 {$SITE_ADDRESS:localhost} {
 	# Сжатие ответов (zstd для поддерживающих, иначе gzip)

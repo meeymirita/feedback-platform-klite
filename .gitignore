@@ -28,3 +28,4 @@ yarn-error.log*
 .temp
 .tmp
 *.pid
+caddy-root.crt

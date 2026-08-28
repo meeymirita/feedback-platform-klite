@@ -1,7 +1,8 @@
 # ─────────────────────────────────────────────────────────────
-# Производственный стек: PostgreSQL + backend (NestJS) + frontend (nginx).
+# Производственный стек: PostgreSQL + backend (NestJS) + frontend (Caddy).
 # Запуск:  docker compose up --build -d
-# Точка входа:  http://localhost:${HTTP_PORT:-8080}
+# Точка входа:  https://localhost:${HTTPS_PORT:-8443}
+#              (HTTP на :${HTTP_PORT:-8080} редиректит на HTTPS)
 # ─────────────────────────────────────────────────────────────
 name: meeymirita-feedback-platform-klite
 
@@ -53,7 +54,7 @@ services:
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
     ports:
-      # Прямой доступ к API в обход nginx — удобно для отладки/Postman
+      # Прямой доступ к API в обход Caddy — удобно для отладки/Postman
       - "${BACKEND_PORT:-3000}:3000"
     init: true
     networks: [meeymirita-net]
