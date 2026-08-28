@@ -16,7 +16,9 @@
 ├── docker-compose.yml       — прод-стек: postgres + backend + frontend (Caddy)
 ├── docker-compose.dev.yml   — overlay для разработки (watch/HMR, bind-mount)
 ├── .env.example             — образец переменных окружения
-├── docs/DOCKER.md           — подробная документация по всем Docker-файлам
+├── docs/
+│   ├── DOCKER.md            — построчная документация по всем Docker-файлам
+│   └── DEPENDENCIES.md      — все библиотеки проекта с версиями и назначением
 └── README.md                — этот файл (ТЗ v1.0)
 ```
 
@@ -42,6 +44,8 @@ backend и сам поднимает HTTPS (внутренний CA для `loca
 
 Полное описание каждого файла (Dockerfile, Caddyfile, compose, .dockerignore,
 .env) с построчными пояснениями — в **[`docs/DOCKER.md`](docs/DOCKER.md)**.
+Список всех зависимостей с версиями и назначением — в
+**[`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md)**.
 
 ---
 
