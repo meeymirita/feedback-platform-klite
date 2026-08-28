@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+coverage/
+
+# env / secrets
+.env
+.env.*.local
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# misc
+.temp
+.tmp
+*.pid
