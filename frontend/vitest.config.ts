@@ -9,6 +9,8 @@ export default mergeConfig(
       environment: 'jsdom',
       exclude: [...configDefaults.exclude, 'e2e/**'],
       root: fileURLToPath(new URL('./', import.meta.url)),
+      // пока юнит-тестов нет — не падать (см. docs/PLAN.md, фаза 10)
+      passWithNoTests: true,
     },
   }),
 )
