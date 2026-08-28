@@ -45,53 +45,48 @@
 Демо-контент Vue удалён, `App.vue` / роутер / `HomeView` сведены к минимуму,
 бэкенд-заглушка поправлена. Стартовая точка чистая. *(сделано)*
 
-### 0.3. Обновить `.env.example` и `.env`
+### 0.3. Переменные окружения — *(сделано по курсу)*
 
-Добавить переменные, которые появятся в фазах 1–2 (значения-примеры):
+Фактическая раскладка (не как в черновике плана):
 
-```dotenv
-# Prisma
-DATABASE_URL=postgresql://mira:mira@postgres:5432/reports?schema=public
+- **`backend/.env`** (dev на хосте) и **`backend/.env.example`** — переменные
+  приложения: `APPLICATION_PORT` · `APPLICATION_URL` · `ALLOWED_ORIGIN` ·
+  `COOKIES_SECRET` · `POSTGRES_*` + `POSTGRES_URI` · `REDIS_*` + `REDIS_URI`.
+- **корневой `.env` / `.env.example`** — только для `docker compose`.
+- Prisma CLI берёт `POSTGRES_URI` из `prisma.config.ts` (v7: в схеме `url` больше нет).
+- Секретов JWT нет — аутентификация на сессиях (см. заметку вверху).
 
-# Auth
-JWT_ACCESS_SECRET=...
-JWT_REFRESH_SECRET=...
-JWT_ACCESS_TTL=15m
-JWT_REFRESH_TTL=7d
-BCRYPT_ROUNDS=12
-
-# Первый администратор (сидируется при старте, если users пуста)
-SEED_ADMIN_EMAIL=admin@company.ru
-SEED_ADMIN_PASSWORD=change_me
-SEED_ADMIN_NAME=Администратор
-
-# Часовой пояс компании для отображения (хранение — всегда UTC)
-APP_TZ=Europe/Moscow
-```
-
-**Готово когда:** выбор записан (сюда же, в таблицу 0.1), `.env.example` дополнен.
+Разбор всех переменных — в [`DOCKER.md` §3](DOCKER.md#3-переменные-окружения-два-файла).
 
 ---
 
 ## Фаза 1. Фундамент бэкенда
 
-### 1.1. Конфигурация
+### 1.1. Конфигурация — *(сделано по курсу)*
 
-- `npm i @nestjs/config`
-- `ConfigModule.forRoot({ isGlobal: true })`, типизированный доступ через `ConfigService`.
-- Вынести чтение всех env в один `config/`-модуль, провалидировать на старте
-  (`joi` или `class-validator`) — приложение не должно стартовать без `DATABASE_URL` / секретов.
+`@nestjs/config` подключён в `app.module.ts`: `isGlobal: true`,
+`expandVariables: true` (в `.env` есть `${...}`), `ignoreEnvFile: !IS_DEV_ENV`
+(в проде переменные из окружения, не из файла). `main.ts` читает через
+`config.getOrThrow(...)`.
 
-**Готово когда:** `docker compose up` падает с понятной ошибкой, если убрать обязательную переменную.
+### 1.2. Подключение к БД (Prisma) — *частично*
 
-### 1.2. Подключение к БД (Prisma)
+Сделано: схема `prisma/schema.prisma` (модели `User` / `Account` / `Token`,
+generator `prisma-client`, `moduleFormat = "cjs"`), `prisma.config.ts` (v7:
+`dotenv-expand` + `datasource.url = POSTGRES_URI`), `prisma validate` проходит.
 
-- `npm i -D prisma`, `npm i @prisma/client`
-- `npx prisma init` → `prisma/schema.prisma`, datasource на `env("DATABASE_URL")`.
-- `PrismaModule` + `PrismaService` (расширяет `PrismaClient`, `onModuleInit` → `$connect`).
-- В `backend/Dockerfile` (стадия `build`) добавить `npx prisma generate` перед `nest build`.
+Осталось:
+- `npm i @prisma/adapter-pg pg` — Prisma 7 требует driver-адаптер в рантайме.
+- `PrismaModule` + `PrismaService`: `new PrismaClient({ adapter: new PrismaPg(pool) })`,
+  `onModuleInit` → проверка соединения, `onModuleDestroy` → `pool.end()`.
+- `output` клиента — `backend/generated/prisma` (вне `src/`) → при импорте из `src/`
+  `nest build` с `rootDir: "src"` ругнётся. Варианты: перенести `output` в
+  `../src/generated/prisma`, либо убрать `rootDir` из `tsconfig.build.json`
+  (тогда следить, чтобы `dist/main.js` не уехал в `dist/src/`).
+- `backend/Dockerfile` (стадия `build`): раскомментировать `RUN npx prisma generate`
+  и `COPY --from=build /app/generated ./generated` в production.
 
-**Готово когда:** `PrismaService` инжектится, `SELECT 1` из healthcheck проходит.
+**Готово когда:** `PrismaService` инжектится, тестовый запрос к БД проходит.
 
 ### 1.3. Схема данных и первая миграция
 
@@ -132,7 +127,7 @@ enum Role { EMPLOYEE ADMIN }
   запускать `npx prisma migrate deploy && node dist/main` (через entrypoint-скрипт
   или `command`).
 
-**Готово когда:** таблицы `User` / `ReportEntry` есть в БД (`docker compose exec postgres psql -U mira -d reports -c '\dt'`).
+**Готово когда:** таблицы `User` / `ReportEntry` есть в БД (`docker compose exec postgres psql -U root -d full-authorization -c '\dt'`).
 
 ### 1.4. Каркас приложения
 

@@ -49,15 +49,17 @@
 
 | Пакет | Версия | Назначение |
 | --- | --- | --- |
-| `@nestjs/config` | `^12.0.0` | Загрузка `.env`, типизированный `ConfigService` (ТЗ §6). |
+| `@nestjs/config` | `^12.0.0` | Загрузка `.env`, типизированный `ConfigService` (ТЗ §6). В `app.module.ts`: `expandVariables: true`. |
 | `class-validator` | `^0.15.1` | Декларативная валидация DTO (`@IsEmail()`, `@IsInt()` …) — ТЗ §7. |
 | `class-transformer` | `^0.5.1` | Преобразование plain-объектов в классы DTO (работает в паре с `ValidationPipe`). |
+| `dotenv` | `^17.4.2` | Явная загрузка `.env`. Нужна `is-dev-util.ts` (чтобы `IS_DEV_ENV` был известен до `ConfigModule`) и `prisma.config.ts` (Prisma 7 сам `.env` не грузит). |
+| `dotenv-expand` | `^1000.0.0` | Раскрытие `${...}` в `.env` — `POSTGRES_URI` / `REDIS_URI` / `APPLICATION_URL` собираются из частей. Использует `prisma.config.ts`. |
 
 ### База данных
 
 | Пакет | Версия | Назначение |
 | --- | --- | --- |
-| `@prisma/client` | `^7.10.0` | Сгенерированный типобезопасный клиент запросов к PostgreSQL. Версия обязана совпадать по мажору с dev-пакетом `prisma`. |
+| `@prisma/client` | `^7.10.0` | Клиент запросов к PostgreSQL. Prisma 7: generator `prisma-client` (не `-js`), клиент генерится в `backend/generated/prisma` (`moduleFormat = "cjs"`), в рантайме нужен driver-адаптер `@prisma/adapter-pg` + `pg` (ещё не установлены). Мажор совпадает с dev-пакетом `prisma`. |
 
 ### Аутентификация, сессии, cookies
 

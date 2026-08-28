@@ -73,7 +73,8 @@ ACME (Let's Encrypt / ZeroSSL). Это единая точка входа из �
 ```bash
 # 1. Подготовить переменные окружения
 cp .env.example .env
-#    отредактировать пароли, JWT-секреты и при необходимости SITE_ADDRESS
+#    отредактировать пароли и секреты; при необходимости SITE_ADDRESS
+#    (переменные самого приложения — в backend/.env, см. backend/.env.example)
 
 # 2a. Прод-режим (сборка + фон)
 docker compose up --build -d
@@ -108,53 +109,66 @@ HTTPS_PORT=443
 
 ---
 
-## 3. `.env.example`
+## 3. Переменные окружения: два файла
 
-**Путь:** `./.env.example`
+| Файл | Кто читает | Когда |
+| --- | --- | --- |
+| **`./.env`** (образец `.env.example`) | только `docker compose` — подстановка `${...}` в `docker-compose.yml` | всегда при `docker compose` |
+| **`./backend/.env`** (образец `backend/.env.example`) | приложение NestJS через `@nestjs/config` | **только dev на хосте** (`npm run start:dev`) |
+
+В Docker приложение переменные из `backend/.env` **не читает** (`NODE_ENV=production`
+→ `app.module.ts` ставит `ignoreEnvFile: true`) — они приходят из блока
+`environment:` сервиса `backend`. `dotenv` не перезаписывает уже заданные
+`process.env`, поэтому в dev-overlay значения из compose (хосты `postgres`/`redis`)
+имеют приоритет над `backend/.env` (хосты `localhost`).
+
+### `./.env.example`
 
 ```dotenv
 # ── PostgreSQL ───────────────────────────────────────────────
-POSTGRES_DB=reports
-POSTGRES_USER=mira
-POSTGRES_PASSWORD=change_me_in_prod
-POSTGRES_PORT=5432
+POSTGRES_USER=root
+POSTGRES_PASSWORD=change_me
+POSTGRES_DB=full-authorization
+POSTGRES_PORT=5433          # порт на хосте; внутри сети compose всегда 5432
 
-# ── Backend (NestJS) ─────────────────────────────────────────
+# ── Redis ────────────────────────────────────────────────────
+REDIS_PASSWORD=change_me
+REDIS_PORT=6379
+
+# ── Backend ─────────────────────────────────────────────────
 NODE_ENV=production
-BACKEND_PORT=3000
-DATABASE_URL=postgresql://mira:change_me_in_prod@postgres:5432/reports
-JWT_SECRET=replace_with_long_random_string
-JWT_REFRESH_SECRET=replace_with_another_long_random_string
-JWT_ACCESS_TTL=15m
-JWT_REFRESH_TTL=7d
+APPLICATION_PORT=3000
+ALLOWED_ORIGIN=https://meeymirita.localhost:8443
+COOKIES_SECRET=replace_with_long_random_string
 
-# ── Точка входа (Caddy, HTTPS автоматически) ─────────────────
+# ── Точка входа (Caddy) ─────────────────────────────────────
 SITE_ADDRESS=localhost
 HTTP_PORT=8080
 HTTPS_PORT=8443
 
-# ── Прочее ───────────────────────────────────────────────────
 TZ=Europe/Moscow
 ```
 
-### Пояснение
-
 | Переменная | Назначение |
 | --- | --- |
-| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | Учётные данные, с которыми официальный образ `postgres` создаёт БД при первом запуске (пока том пуст). |
-| `POSTGRES_PORT` | Порт **хоста**, проброшенный на `5432` контейнера. Внутри сети compose сервисы обращаются к `postgres:5432`. |
-| `NODE_ENV` | `production` в прод-стеке; dev-overlay принудительно ставит `development`. |
-| `BACKEND_PORT` | Порт хоста для прямого доступа к API в обход Caddy (Postman, отладка). |
-| `DATABASE_URL` | Готовая строка подключения для TypeORM/Prisma. Хост — `postgres` (имя сервиса = DNS-имя в сети compose). |
-| `JWT_SECRET` / `JWT_REFRESH_SECRET` | Секреты подписи access/refresh токенов (ТЗ п. 3.1). В проде — длинные случайные строки, не коммитить. |
-| `JWT_ACCESS_TTL` / `JWT_REFRESH_TTL` | Время жизни токенов. |
-| `SITE_ADDRESS` | Адрес, который обслуживает Caddy. `localhost` → внутренний CA (локальный HTTPS). Реальный домен → сертификат по ACME. |
-| `HTTP_PORT` | Порт хоста на `:80` Caddy — там HTTP, который редиректит на HTTPS, и проходит ACME-челлендж. |
-| `HTTPS_PORT` | Порт хоста на `:443` Caddy — **основная точка входа** (SPA + `/api`). |
-| `TZ` | Единый часовой пояс для контейнеров (ТЗ п. 7: хранить UTC, показывать в TZ компании). |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Учётные данные, с которыми образ `postgres` создаёт БД при первом старте. Совпадают с `backend/.env`. |
+| `POSTGRES_PORT` | Порт **хоста** → `5432` контейнера (курс использует `5433`, чтобы не конфликтовать с локальным Postgres). |
+| `REDIS_PASSWORD` | Пароль Redis (`--requirepass`); тот же в `backend/.env` → `REDIS_URI`. |
+| `REDIS_PORT` | Порт хоста → `6379` контейнера. |
+| `NODE_ENV` | `production` в прод-стеке; dev-overlay ставит `development`. |
+| `APPLICATION_PORT` | Порт, на котором слушает Nest (`main.ts` → `config.getOrThrow('APPLICATION_PORT')`); он же пробрасывается на хост. |
+| `ALLOWED_ORIGIN` | Origin фронтенда для CORS с `credentials` (`main.ts`). |
+| `COOKIES_SECRET` | Секрет подписи cookie (`cookie-parser` в `main.ts`). |
+| `SITE_ADDRESS` | Хост, который обслуживает Caddy: `localhost` / `*.localhost` / IP → внутренний CA; реальный домен → ACME. |
+| `HTTP_PORT` / `HTTPS_PORT` | Порты хоста на `:80` / `:443` Caddy. HTTPS — основная точка входа. |
+| `TZ` | Часовой пояс контейнеров (ТЗ §7). |
+
+`POSTGRES_URI` и `REDIS_URI` для контейнера backend **не** в `.env` — они
+собираются прямо в `docker-compose.yml` из кусочков выше, но с хостами
+`postgres` / `redis` (не `localhost`).
 
 Все переменные в compose заданы как `${VAR:-default}` — стек поднимется и без
-`.env`, но с небезопасными дефолтами. `.env` в git не попадает (`.gitignore`).
+`.env`, но с дефолтами курса. Оба `.env` в git не попадают.
 
 ---
 
@@ -493,16 +507,16 @@ services:
     container_name: meeymirita-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-reports}
-      POSTGRES_USER: ${POSTGRES_USER:-mira}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mira}
+      POSTGRES_DB: ${POSTGRES_DB:-full-authorization}
+      POSTGRES_USER: ${POSTGRES_USER:-root}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
       TZ: ${TZ:-Europe/Moscow}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - meeymirita_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mira} -d ${POSTGRES_DB:-reports}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-root} -d ${POSTGRES_DB:-full-authorization}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -512,13 +526,13 @@ services:
     image: redis:7-alpine
     container_name: meeymirita-redis
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-pass123456}"]
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
       - meeymirita_redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-pass123456}", "--no-auth-warning", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -538,32 +552,15 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      PORT: 3000
       TZ: ${TZ:-Europe/Moscow}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://mira:mira@postgres:5432/reports}
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: ${POSTGRES_DB:-reports}
-      POSTGRES_USER: ${POSTGRES_USER:-mira}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mira}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      APPLICATION_PORT: 3000
+      APPLICATION_URL: http://localhost:3000
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-https://meeymirita.localhost:8443}
       COOKIES_SECRET: ${COOKIES_SECRET:-dev_insecure_cookies_change_me}
-      SESSION_SECRET: ${SESSION_SECRET:-dev_insecure_session_change_me}
-      SESSION_TTL: ${SESSION_TTL:-86400}
-      JWT_SECRET: ${JWT_SECRET:-dev_insecure_secret_change_me}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_insecure_refresh_change_me}
-      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
-      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
-      MAIL_HOST: ${MAIL_HOST:-}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USER: ${MAIL_USER:-}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
-      MAIL_FROM: ${MAIL_FROM:-}
-      RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY:-}
+      POSTGRES_URI: postgresql://${POSTGRES_USER:-root}:${POSTGRES_PASSWORD:-123456}@postgres:5432/${POSTGRES_DB:-full-authorization}
+      REDIS_URI: redis://default:${REDIS_PASSWORD:-pass123456}@redis:6379
     ports:
-      - "${BACKEND_PORT:-3000}:3000"
+      - "${APPLICATION_PORT:-3000}:3000"
     init: true
     networks: [meeymirita-net]
 
@@ -609,9 +606,11 @@ networks:
 - `container_name: meeymirita-postgres` — предсказуемое имя для `docker exec`/логов.
 - `restart: unless-stopped` — поднимать после перезагрузки хоста/падения, но не
   после ручного `docker stop`.
-- `environment` — БД/пользователь/пароль из `.env` (дефолты `mira`).
-- `ports: "${POSTGRES_PORT:-5432}:5432"` — доступ к БД с хоста (psql, DBeaver).
-  В проде строку можно убрать — сервисам БД видна по сети compose.
+- `environment` — БД/пользователь/пароль из `.env` (дефолты курса `root` /
+  `123456` / `full-authorization`). Применяются только при первом старте с пустым
+  томом; сменил — пересоздай том (`docker compose down -v`).
+- `ports: "${POSTGRES_PORT:-5433}:5432"` — доступ к БД с хоста (psql, DBeaver).
+  Порт хоста `5433`, чтобы не конфликтовать с локальным Postgres (так в `backend/.env`).
 - `volumes: meeymirita_pgdata:/var/lib/postgresql/data` — данные в именованном
   томе, переживают пересоздание контейнера.
 - `healthcheck: pg_isready …` — БД считается готовой, только когда реально
@@ -619,13 +618,13 @@ networks:
 
 #### Сервис `redis`
 - `image: redis:7-alpine` — хранилище сессий (`express-session` + `connect-redis`).
-- `command: redis-server --appendonly yes` — включён AOF-персист: сессии
-  переживают перезапуск контейнера.
+- `command: redis-server --appendonly yes --requirepass <REDIS_PASSWORD>` —
+  AOF-персист (сессии переживают перезапуск) + пароль. Пароль тот же, что в
+  `backend/.env` → `REDIS_URI` (`redis://default:<pass>@redis:6379`).
 - `volumes: meeymirita_redisdata:/data` — том под дамп AOF.
-- `healthcheck: redis-cli ping` — `redis` считается готовым по ответу `PONG`;
-  от этого зависит старт backend.
-- `ports: "${REDIS_PORT:-6379}:6379"` — доступ с хоста (redis-cli, GUI). В проде
-  можно убрать.
+- `healthcheck: redis-cli -a <pass> --no-auth-warning ping` — с паролем обычный
+  `PING` вернул бы `NOAUTH`, поэтому в проверке передаём `-a`.
+- `ports: "${REDIS_PORT:-6379}:6379"` — доступ с хоста (redis-cli, GUI).
 
 #### Сервис `backend`
 - `build.context: ./backend`, `build.target: production` — собирается прод-стадия
@@ -633,18 +632,20 @@ networks:
 - `image: …-backend:latest` — имя собранного образа (удобно пушить в реестр).
 - `depends_on` — backend стартует **после** того, как `postgres` **и** `redis`
   стали `healthy` (по их healthcheck'ам), а не просто «контейнер запущен».
-- `environment`:
-  - `PORT: 3000` — на нём слушает Nest (`main.ts`).
-  - `DATABASE_URL` + отдельные `POSTGRES_*` — для Prisma; хост БД — `postgres`
-    (имя сервиса).
-  - `REDIS_URL` / `REDIS_HOST` / `REDIS_PORT` — подключение к Redis; хост — `redis`.
-  - `COOKIES_SECRET` — подпись cookie (`cookie-parser`).
-  - `SESSION_SECRET` / `SESSION_TTL` — секрет и время жизни сессии (`express-session`).
-  - `MAIL_*` — SMTP для `@nestjs-modules/mailer`; `RECAPTCHA_SECRET_KEY` — для
-    `@nestlab/google-recaptcha`. Пустые по умолчанию.
-  - `JWT_*` — оставлены на случай, если понадобится вдобавок к сессиям.
-- `ports: "${BACKEND_PORT:-3000}:3000"` — прямой доступ к API в обход Caddy
-  (Swagger, Postman). Для чистого прода можно убрать.
+- `environment` (имена — как читает код через `@nestjs/config`):
+  - `APPLICATION_PORT: 3000` — `main.ts` → `config.getOrThrow('APPLICATION_PORT')`.
+  - `APPLICATION_URL` — базовый URL API (для ссылок в письмах и т.п.).
+  - `ALLOWED_ORIGIN` — origin фронтенда для CORS с `credentials` (`main.ts`).
+  - `COOKIES_SECRET` — подпись cookie (`cookie-parser` в `main.ts`).
+  - `POSTGRES_URI` — собирается тут же из `POSTGRES_USER`/`PASSWORD`/`DB`, но хост —
+    **`postgres`** (сервис compose), порт `5432`. Схема Prisma читает `env("POSTGRES_URI")`.
+  - `REDIS_URI` — `redis://default:<pass>@redis:6379` (хост `redis`).
+  - `NODE_ENV: production` → `app.module.ts` ставит `ignoreEnvFile: true` → переменные
+    берутся отсюда, `backend/.env` игнорируется.
+  - Почта / reCAPTCHA (`@nestjs-modules/mailer`, `@nestlab/google-recaptcha`) —
+    пакеты стоят, но не подключены; их переменные добавить сюда, когда будут нужны.
+- `ports: "${APPLICATION_PORT:-3000}:3000"` — прямой доступ к API в обход Caddy
+  (Postman). Для чистого прода можно убрать.
 - `init: true` — Docker подкладывает свой init (PID 1) для реапинга зомби-процессов
   (в дополнение к `dumb-init` в образе).
 
@@ -766,7 +767,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 # ── Точечно ─────────────────────────────────────────────────
 docker compose build backend          # пересобрать один образ
 docker compose exec backend sh        # шелл внутри контейнера
-docker compose exec postgres psql -U mira -d reports   # psql в БД
+docker compose exec postgres psql -U root -d full-authorization   # psql в БД
 docker compose restart backend        # перезапуск сервиса
 
 # ── Корневой сертификат Caddy (чтобы браузер доверял localhost) ──

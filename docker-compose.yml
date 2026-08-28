@@ -13,16 +13,16 @@ services:
     container_name: meeymirita-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-reports}
-      POSTGRES_USER: ${POSTGRES_USER:-mira}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mira}
+      POSTGRES_DB: ${POSTGRES_DB:-full-authorization}
+      POSTGRES_USER: ${POSTGRES_USER:-root}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
       TZ: ${TZ:-Europe/Moscow}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - meeymirita_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mira} -d ${POSTGRES_DB:-reports}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-root} -d ${POSTGRES_DB:-full-authorization}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -33,14 +33,14 @@ services:
     image: redis:7-alpine
     container_name: meeymirita-redis
     restart: unless-stopped
-    # appendonly — сессии переживают перезапуск контейнера
-    command: ["redis-server", "--appendonly", "yes"]
+    # appendonly — сессии переживают перезапуск; requirepass — пароль как в backend/.env
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-pass123456}"]
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
       - meeymirita_redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-pass123456}", "--no-auth-warning", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -60,34 +60,20 @@ services:
       redis:
         condition: service_healthy
     environment:
+      # NODE_ENV=production → app.module.ts ставит ignoreEnvFile:true,
+      # переменные берутся отсюда, а не из backend/.env
       NODE_ENV: ${NODE_ENV:-production}
-      PORT: 3000
       TZ: ${TZ:-Europe/Moscow}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://mira:mira@postgres:5432/reports}
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: ${POSTGRES_DB:-reports}
-      POSTGRES_USER: ${POSTGRES_USER:-mira}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mira}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      APPLICATION_PORT: 3000
+      APPLICATION_URL: http://localhost:3000
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-https://meeymirita.localhost:8443}
       COOKIES_SECRET: ${COOKIES_SECRET:-dev_insecure_cookies_change_me}
-      SESSION_SECRET: ${SESSION_SECRET:-dev_insecure_session_change_me}
-      SESSION_TTL: ${SESSION_TTL:-86400}
-      JWT_SECRET: ${JWT_SECRET:-dev_insecure_secret_change_me}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_insecure_refresh_change_me}
-      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
-      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
-      MAIL_HOST: ${MAIL_HOST:-}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USER: ${MAIL_USER:-}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
-      MAIL_FROM: ${MAIL_FROM:-}
-      RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY:-}
+      # Хосты — имена сервисов compose; порты внутренние (5432 / 6379)
+      POSTGRES_URI: postgresql://${POSTGRES_USER:-root}:${POSTGRES_PASSWORD:-123456}@postgres:5432/${POSTGRES_DB:-full-authorization}
+      REDIS_URI: redis://default:${REDIS_PASSWORD:-pass123456}@redis:6379
     ports:
       # Прямой доступ к API в обход Caddy — удобно для отладки/Postman
-      - "${BACKEND_PORT:-3000}:3000"
+      - "${APPLICATION_PORT:-3000}:3000"
     init: true
     networks: [meeymirita-net]
 

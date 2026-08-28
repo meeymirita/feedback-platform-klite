@@ -1,4 +1,14 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  "compilerOptions": {
+    // держим вывод в dist/ плоским: dist/main.js, а не dist/src/main.js.
+    // Без этого tsc берёт за корень папку backend/ (из-за prisma.config.ts
+    // и generated/) и структура dist/ разъезжается.
+    "rootDir": "src",
+    // incremental отключён: .tsbuildinfo лежит вне dist/, deleteOutDir его не
+    // чистит, и после удаления dist/ tsc делает частичный emit (только .d.ts).
+    "incremental": false
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "test", "dist", "generated", "prisma.config.ts", "**/*spec.ts"]
 }

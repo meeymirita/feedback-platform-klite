@@ -40,6 +40,9 @@ CMD ["dumb-init", "npm", "run", "start:dev"]
 FROM deps AS build
 ENV NODE_ENV=production
 COPY . .
+# Когда PrismaClient будет подключён в коде — добавить перед `npm run build`:
+#   RUN npx prisma generate
+# и в стадию production: COPY --from=build /app/generated ./generated
 RUN npm run build \
  && npm prune --omit=dev
 

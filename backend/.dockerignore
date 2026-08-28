@@ -2,6 +2,8 @@
 node_modules
 dist
 coverage
+generated
+*.tsbuildinfo
 .git
 .gitignore
 .gitattributes
@@ -11,6 +13,10 @@ Dockerfile
 .env.*
 .idea
 .vscode
+.agents
+.claude
+.windsurf
+skills-lock.json
 *.log
 npm-debug.log*
 *.md

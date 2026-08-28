@@ -32,6 +32,8 @@
     "class-validator": "^0.15.1",
     "connect-redis": "^10.0.0",
     "cookie-parser": "^1.4.7",
+    "dotenv": "^17.4.2",
+    "dotenv-expand": "^1000.0.0",
     "express-session": "^1.19.0",
     "ioredis": "^6.0.0",
     "nodemailer": "^9.0.6",
