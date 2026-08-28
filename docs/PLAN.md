@@ -3,8 +3,16 @@
 Пошаговый порядок разработки по [`TZ.md`](TZ.md). Идём сверху вниз — каждый шаг
 опирается на предыдущий. У каждого шага есть критерий **«Готово когда»**.
 
-Инфраструктура (Docker, Postgres, Caddy, HTTPS, dev/prod-режимы) **уже готова** —
-см. [`DOCKER.md`](DOCKER.md). Начинаем с кода.
+Инфраструктура (Docker, Postgres, **Redis**, Caddy, HTTPS, dev/prod-режимы)
+**уже готова** — см. [`DOCKER.md`](DOCKER.md). Начинаем с кода.
+
+> **Стек аутентификации (по курсу) отличается от ТЗ §3.1.** Вместо JWT/passport
+> используются **серверные сессии**: `express-session` + `connect-redis` (стор в
+> Redis) + `ioredis`, пароли — `argon2`, ORM — Prisma, плюс `@nestjs-modules/mailer`
+> и `@nestlab/google-recaptcha`. Пакеты установлены и Redis добавлен в compose
+> ([`DEPENDENCIES.md`](DEPENDENCIES.md)). В шагах фазы 2 ниже «JWT» → читать как
+> «сессия»: `POST /auth/login` создаёт сессию, `SessionGuard` вместо `JwtAuthGuard`,
+> `refresh`/`logout` — операции над сессией.
 
 ---
 

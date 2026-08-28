@@ -46,12 +46,13 @@
                    ┌────────────────────────────┐
                    │  backend  (Nest :3000)      │  образ meeymirita/feedback-klite-backend
                    │  node dist/main             │
-                   └───────────┬────────────────┘
-                               │
-                               ▼
-                   ┌────────────────────────────┐
-                   │  postgres:16-alpine :5432   │  том meeymirita_pgdata
-                   └────────────────────────────┘
+                   └──────┬──────────────┬──────┘
+                          │              │
+                          ▼              ▼
+        ┌────────────────────────┐  ┌────────────────────────┐
+        │ postgres:16-alpine     │  │ redis:7-alpine :6379   │
+        │ :5432 · том …_pgdata   │  │ сессии · том …_redisdata│
+        └────────────────────────┘  └────────────────────────┘
 ```
 
 **Почему Caddy и почему один контейнер, а не отдельный nginx.** В ТЗ на схеме
@@ -167,9 +168,11 @@ TZ=Europe/Moscow
 FROM node:22-alpine AS base
 WORKDIR /app
 RUN apk add --no-cache dumb-init
+RUN npm i -g npm@11
 ENV TZ=Europe/Moscow
 
 FROM base AS deps
+RUN apk add --no-cache python3 make g++
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 
@@ -206,15 +209,20 @@ CMD ["dumb-init", "node", "dist/main"]
 - `apk add --no-cache dumb-init` — крохотный init-процесс (PID 1). Node сам по себе
   не пробрасывает сигналы дочерним процессам и игнорирует `SIGTERM` → `docker stop`
   ждёт 10 с и убивает контейнер. `dumb-init` это чинит (graceful shutdown).
+- `npm i -g npm@11` — образ несёт npm 10.9, а `package-lock.json` пишется локальным
+  npm 11+. Без апгрейда `npm ci` падает с `EUSAGE` на конфликте `chokidar` в дереве
+  `@nestjs-modules/mailer` (mjml/nunjucks хотят `chokidar@3`, npm 11 деупает `4`).
 - `ENV TZ=Europe/Moscow` — часовой пояс внутри контейнера.
 
 **Стадия `deps`** — изолированная установка зависимостей.
+- `apk add python3 make g++` — тулчейн `node-gyp`: у `argon2` нет prebuild под
+  musl (Alpine), нативный модуль собирается из исходников. В `production` не тянется.
 - Копируются **только** `package.json` и `package-lock.json`. Пока они не менялись,
   Docker берёт слой из кэша и `npm ci` повторно не выполняется, даже если поменялся код.
 - `npm ci` — детерминированная установка строго по lock-файлу.
 - `--mount=type=cache,target=/root/.npm` — кэш скачанных пакетов npm живёт между
   сборками, но не попадает в образ.
-- Ставятся **все** зависимости, включая dev (`@nestjs/cli`, `typescript`) — нужны для компиляции.
+- Ставятся **все** зависимости, включая dev (`@nestjs/cli`, `typescript`, `prisma`) — нужны для компиляции.
 
 **Стадия `development`** — для `docker-compose.dev.yml`.
 - `NODE_ENV=development`; `COPY . .` — код в образ (в dev поверх монтируется bind-mount).
@@ -500,6 +508,22 @@ services:
       retries: 10
     networks: [meeymirita-net]
 
+  redis:
+    image: redis:7-alpine
+    container_name: meeymirita-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - meeymirita_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [meeymirita-net]
+
   backend:
     build:
       context: ./backend
@@ -509,6 +533,8 @@ services:
     restart: unless-stopped
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-production}
@@ -520,10 +546,22 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-reports}
       POSTGRES_USER: ${POSTGRES_USER:-mira}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mira}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      COOKIES_SECRET: ${COOKIES_SECRET:-dev_insecure_cookies_change_me}
+      SESSION_SECRET: ${SESSION_SECRET:-dev_insecure_session_change_me}
+      SESSION_TTL: ${SESSION_TTL:-86400}
       JWT_SECRET: ${JWT_SECRET:-dev_insecure_secret_change_me}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_insecure_refresh_change_me}
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY:-}
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     init: true
@@ -551,6 +589,7 @@ services:
 
 volumes:
   meeymirita_pgdata:
+  meeymirita_redisdata:
   meeymirita_caddy_data:
   meeymirita_caddy_config:
 
@@ -578,17 +617,32 @@ networks:
 - `healthcheck: pg_isready …` — БД считается готовой, только когда реально
   принимает подключения; от этого зависит старт backend.
 
+#### Сервис `redis`
+- `image: redis:7-alpine` — хранилище сессий (`express-session` + `connect-redis`).
+- `command: redis-server --appendonly yes` — включён AOF-персист: сессии
+  переживают перезапуск контейнера.
+- `volumes: meeymirita_redisdata:/data` — том под дамп AOF.
+- `healthcheck: redis-cli ping` — `redis` считается готовым по ответу `PONG`;
+  от этого зависит старт backend.
+- `ports: "${REDIS_PORT:-6379}:6379"` — доступ с хоста (redis-cli, GUI). В проде
+  можно убрать.
+
 #### Сервис `backend`
 - `build.context: ./backend`, `build.target: production` — собирается прод-стадия
   из [`backend/Dockerfile`](#4-backenddockerfile).
 - `image: …-backend:latest` — имя собранного образа (удобно пушить в реестр).
-- `depends_on: postgres: condition: service_healthy` — backend стартует **после**
-  того, как healthcheck Postgres стал `healthy`, а не просто «контейнер запущен».
+- `depends_on` — backend стартует **после** того, как `postgres` **и** `redis`
+  стали `healthy` (по их healthcheck'ам), а не просто «контейнер запущен».
 - `environment`:
   - `PORT: 3000` — на нём слушает Nest (`main.ts`).
-  - `DATABASE_URL` + отдельные `POSTGRES_*` — что удобнее ORM, то и использует;
-    хост БД — `postgres` (имя сервиса).
-  - `JWT_*` — секреты и TTL токенов (ТЗ п. 3.1).
+  - `DATABASE_URL` + отдельные `POSTGRES_*` — для Prisma; хост БД — `postgres`
+    (имя сервиса).
+  - `REDIS_URL` / `REDIS_HOST` / `REDIS_PORT` — подключение к Redis; хост — `redis`.
+  - `COOKIES_SECRET` — подпись cookie (`cookie-parser`).
+  - `SESSION_SECRET` / `SESSION_TTL` — секрет и время жизни сессии (`express-session`).
+  - `MAIL_*` — SMTP для `@nestjs-modules/mailer`; `RECAPTCHA_SECRET_KEY` — для
+    `@nestlab/google-recaptcha`. Пустые по умолчанию.
+  - `JWT_*` — оставлены на случай, если понадобится вдобавок к сессиям.
 - `ports: "${BACKEND_PORT:-3000}:3000"` — прямой доступ к API в обход Caddy
   (Swagger, Postman). Для чистого прода можно убрать.
 - `init: true` — Docker подкладывает свой init (PID 1) для реапинга зомби-процессов

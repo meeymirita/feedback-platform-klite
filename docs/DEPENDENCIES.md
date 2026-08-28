@@ -26,6 +26,7 @@
 | --- | --- | --- |
 | `node:22-alpine` | `backend/Dockerfile`, `frontend/Dockerfile` | Node 22 LTS на Alpine — сборка и рантайм backend, сборка статики frontend. Движок frontend требует `^22.18 || >=24.12`. |
 | `postgres:16-alpine` | `docker-compose.yml` | СУБД PostgreSQL 16 (ТЗ). Версия зафиксирована, чтобы мажорный апгрейд не сломал том данных. |
+| `redis:7-alpine` | `docker-compose.yml` | Хранилище сессий (`express-session` + `connect-redis`). `--appendonly yes` + том `meeymirita_redisdata` — сессии переживают перезапуск. |
 | `caddy:2-alpine` | `frontend/Dockerfile` (стадия `production`) | Веб-сервер: раздача SPA, реверс-прокси на `/api`, автоматический HTTPS (внутренний CA для `localhost`, ACME для домена). |
 
 ---
@@ -34,6 +35,8 @@
 
 `backend/package.json` → `dependencies`. Попадают в продакшн-образ.
 
+### Ядро NestJS
+
 | Пакет | Версия | Назначение |
 | --- | --- | --- |
 | `@nestjs/common` | `^11.0.1` | Ядро NestJS: декораторы, DI-контейнер, пайпы, гварды, интерсепторы, фильтры исключений. |
@@ -41,6 +44,38 @@
 | `@nestjs/platform-express` | `^11.0.1` | HTTP-адаптер поверх Express (обработка запросов, middleware). Альтернатива — Fastify. |
 | `reflect-metadata` | `^0.2.2` | Полифилл Reflect Metadata API. Нужен декораторам и DI Nest для чтения типов в рантайме. |
 | `rxjs` | `^7.8.1` | Реактивные потоки (Observable). На них построены интерсепторы Nest и потоковые ответы. |
+
+### Конфигурация и валидация
+
+| Пакет | Версия | Назначение |
+| --- | --- | --- |
+| `@nestjs/config` | `^12.0.0` | Загрузка `.env`, типизированный `ConfigService` (ТЗ §6). |
+| `class-validator` | `^0.15.1` | Декларативная валидация DTO (`@IsEmail()`, `@IsInt()` …) — ТЗ §7. |
+| `class-transformer` | `^0.5.1` | Преобразование plain-объектов в классы DTO (работает в паре с `ValidationPipe`). |
+
+### База данных
+
+| Пакет | Версия | Назначение |
+| --- | --- | --- |
+| `@prisma/client` | `^7.10.0` | Сгенерированный типобезопасный клиент запросов к PostgreSQL. Версия обязана совпадать по мажору с dev-пакетом `prisma`. |
+
+### Аутентификация, сессии, cookies
+
+| Пакет | Версия | Назначение |
+| --- | --- | --- |
+| `argon2` | `^0.45.1` | Хэширование паролей (ТЗ §7). Нативный модуль — при сборке под Alpine компилируется (см. `backend/Dockerfile`, стадия `deps`). |
+| `express-session` | `^1.19.0` | Серверные сессии (session-cookie + хранилище). |
+| `connect-redis` | `^10.0.0` | Стор для `express-session` поверх Redis — сессии не в памяти процесса. |
+| `ioredis` | `^6.0.0` | Клиент Redis (используется и как стор сессий, и напрямую при необходимости). |
+| `cookie-parser` | `^1.4.7` | Разбор и подпись cookie (`COOKIES_SECRET`). |
+
+### Почта и антиспам
+
+| Пакет | Версия | Назначение |
+| --- | --- | --- |
+| `@nestjs-modules/mailer` | `^2.3.7` | Обёртка Nest над nodemailer: DI-сервис отправки писем, шаблоны. |
+| `nodemailer` | `^9.0.6` | Транспорт SMTP (peer-зависимость mailer'а). |
+| `@nestlab/google-recaptcha` | `^3.11.3` | Guard/декоратор для проверки Google reCAPTCHA (`RECAPTCHA_SECRET_KEY`). |
 
 ---
 
@@ -55,6 +90,7 @@
 | --- | --- | --- |
 | `@nestjs/cli` | `^11.0.0` | CLI `nest`: `nest build`, `nest start --watch` (dev-режим), `nest generate`. |
 | `@nestjs/schematics` | `^11.0.0` | Шаблоны кода для `nest generate` (модуль, контроллер, сервис, resource). |
+| `prisma` | `^7.10.0` | CLI Prisma: `prisma migrate`, `prisma generate`, `prisma studio`. Мажор совпадает с `@prisma/client`. |
 | `typescript` | `^5.7.3` | Компилятор TypeScript. |
 | `ts-loader` | `^9.5.2` | Загрузчик TS для webpack-сборки, которую использует `nest build`. |
 | `ts-node` | `^10.9.2` | Запуск `.ts` без предварительной компиляции (debug-скрипты, `test:debug`). |
@@ -82,6 +118,7 @@
 | `eslint-plugin-prettier` | `^5.2.2` | Запускает Prettier как правило ESLint (расхождения формата = ошибки линта). |
 | `globals` | `^17.0.0` | Списки глобальных имён сред (node и т.д.) для конфига ESLint. |
 | `prettier` | `^3.4.2` | Форматтер кода. |
+| `@trivago/prettier-plugin-sort-imports` | `^6.0.2` | Плагин Prettier: автосортировка `import`-ов по группам. |
 
 ### Типы (`@types/*`)
 
@@ -89,6 +126,10 @@
 | --- | --- | --- |
 | `@types/node` | `^24.0.0` | Типы стандартной библиотеки Node. |
 | `@types/express` | `^5.0.0` | Типы Express (Request/Response) для платформенного адаптера. |
+| `@types/express-session` | `^1.19.0` | Типы `express-session`. |
+| `@types/cookie-parser` | `^1.4.10` | Типы `cookie-parser`. |
+| `@types/nodemailer` | `^8.0.1` | Типы `nodemailer` (мажор отстаёт от рантайма — норма). |
+| `@types/uuid` | `^10.0.0` | Типы `uuid` (сам пакет — по мере надобности; в Node 22 есть `crypto.randomUUID()`). |
 | `@types/jest` | `^30.0.0` | Типы глобалей Jest (`describe`, `it`, `expect`). |
 | `@types/supertest` | `^7.0.0` | Типы supertest. |
 
@@ -158,29 +199,25 @@
 
 ---
 
-## 6. Запланировано по ТЗ, ещё не установлено
+## 6. Ещё не установлено
 
-Текущий код — стартовые скаффолды (`nest new` / `npm create vue`). По разделам
-5–6 ТЗ ещё потребуются:
+Стек аутентификации выбран по курсу: **сессии (`express-session` + Redis) + `argon2` +
+Prisma**, поэтому JWT/passport из ТЗ §3.1 не используются. По остатку ТЗ §5–6
+потребуются:
 
 ### Backend
 
 | Пакет(ы) | Зачем |
 | --- | --- |
-| `@nestjs/config` | Чтение `.env`, типизированная конфигурация. |
-| `@nestjs/jwt`, `@nestjs/passport`, `passport`, `passport-jwt` | JWT-аутентификация, стратегия и гварды (ТЗ 3.1). |
-| `class-validator`, `class-transformer` | Валидация DTO + `ValidationPipe` (ТЗ 7). |
-| `@nestjs/typeorm` + `typeorm` + `pg` **или** `prisma` + `@prisma/client` | Доступ к PostgreSQL и миграции (ТЗ 6). |
-| `bcrypt` **или** `argon2` | Хэширование паролей (ТЗ 7). |
-| `exceljs` | Генерация `.xlsx` отчётов (ТЗ 3.2, 3.3). |
-| `cookie-parser` | Разбор httpOnly refresh-cookie (ТЗ 3.1). |
-| `helmet` | Базовые security-заголовки. |
-| `@types/passport-jwt`, `@types/bcrypt`, `@types/cookie-parser` | Типы к перечисленному. |
+| `prisma init` → `prisma/schema.prisma`, миграции | Схема `User` / `ReportEntry` (ТЗ §4). Плюс `binaryTargets` для Alpine и шаг `prisma generate` в `backend/Dockerfile` — см. [`PLAN.md`](PLAN.md) фаза 1. |
+| `exceljs` | Генерация `.xlsx` отчётов (ТЗ §3.2, §3.3). |
+| `helmet` | Базовые security-заголовки (ТЗ §7). |
+| `uuid` *(опц.)* | Только если понадобится генерация UUID в коде — в Node 22 есть `crypto.randomUUID()`, а PK генерит Prisma. `@types/uuid` уже стоит. |
 
 ### Frontend
 
 | Пакет(ы) | Зачем |
 | --- | --- |
-| `axios` (или нативный `fetch` + обёртка) | HTTP-клиент с interceptor'ом для JWT (ТЗ 6). |
-| UI-библиотека: `primevue` / `element-plus` / `naive-ui` | Таблицы и формы отчётов (ТЗ 6, выбор не зафиксирован). |
-| Библиотека дат: `date-fns` / `dayjs` | Недельные диапазоны пн–пт, часовой пояс (ТЗ 3.4, 7). |
+| `axios` (или нативный `fetch` + обёртка) | HTTP-клиент; при session-cookie — `withCredentials: true` (ТЗ §6). |
+| UI-библиотека: `primevue` / `element-plus` / `naive-ui` | Таблицы и формы отчётов (ТЗ §6, выбор не зафиксирован). |
+| Библиотека дат: `date-fns` / `dayjs` | Недельные диапазоны пн–пт, часовой пояс (ТЗ §3.4, §7). |

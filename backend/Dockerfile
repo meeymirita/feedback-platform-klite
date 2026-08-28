@@ -8,6 +8,9 @@ WORKDIR /app
 # dumb-init корректно пробрасывает сигналы (SIGTERM/SIGINT) в Node,
 # иначе контейнер останавливается по таймауту вместо graceful shutdown.
 RUN apk add --no-cache dumb-init
+# package-lock.json пишется локальным npm 11+; в образе npm 10.9 — обновляем,
+# иначе `npm ci` спотыкается на конфликте chokidar в дереве @nestjs-modules/mailer.
+RUN npm i -g npm@11
 ENV TZ=Europe/Moscow
 
 # ─────────────────────────────────────────────────────────────
@@ -15,6 +18,9 @@ ENV TZ=Europe/Moscow
 # Отдельный слой: пересобирается только при изменении package*.json
 # ─────────────────────────────────────────────────────────────
 FROM base AS deps
+# Тулчейн для нативных модулей: у argon2 нет musl-prebuild под Alpine,
+# node-gyp собирает его из исходников. В production-образ не попадает.
+RUN apk add --no-cache python3 make g++
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 
