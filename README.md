@@ -6,10 +6,42 @@
 
 ```
 .
-├── backend/    — NestJS API (JWT, TypeORM/Prisma, ExcelJS)
-├── frontend/   — Vue 3 SPA (Vite, Pinia, Vue Router)
-└── README.md   — этот файл (ТЗ v1.0)
+├── backend/                 — NestJS API (JWT, TypeORM/Prisma, ExcelJS)
+│   ├── Dockerfile
+│   └── .dockerignore
+├── frontend/                — Vue 3 SPA (Vite, Pinia, Vue Router)
+│   ├── Dockerfile
+│   ├── Caddyfile            — Caddy: раздача SPA + прокси /api + авто-HTTPS
+│   └── .dockerignore
+├── docker-compose.yml       — прод-стек: postgres + backend + frontend (Caddy)
+├── docker-compose.dev.yml   — overlay для разработки (watch/HMR, bind-mount)
+├── .env.example             — образец переменных окружения
+├── docs/DOCKER.md           — подробная документация по всем Docker-файлам
+└── README.md                — этот файл (ТЗ v1.0)
 ```
+
+---
+
+## Запуск в Docker
+
+```bash
+cp .env.example .env          # заполнить пароли и JWT-секреты
+
+# Прод: postgres + backend (NestJS) + frontend (Caddy, HTTPS автоматически)
+docker compose up --build -d
+#   → https://localhost:8443   (HTTP :8080 редиректит на HTTPS)
+
+# Разработка: авто-перезапуск backend, HMR фронта, исходники с хоста
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#   → http://localhost:8080
+```
+
+Точка входа — контейнер **Caddy**: отдаёт собранный SPA, проксирует `/api/*` на
+backend и сам поднимает HTTPS (внутренний CA для `localhost`, Let's Encrypt для
+реального домена — задаётся через `SITE_ADDRESS` в `.env`).
+
+Полное описание каждого файла (Dockerfile, Caddyfile, compose, .dockerignore,
+.env) с построчными пояснениями — в **[`docs/DOCKER.md`](docs/DOCKER.md)**.
 
 ---
 

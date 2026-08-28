@@ -1,0 +1,16 @@
+# Не попадает в build-контекст образа backend
+node_modules
+dist
+coverage
+.git
+.gitignore
+.gitattributes
+Dockerfile
+.dockerignore
+.env
+.env.*
+.idea
+.vscode
+*.log
+npm-debug.log*
+*.md

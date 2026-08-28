@@ -1,0 +1,33 @@
+# Caddyfile — продакшн. Отдаёт собранный SPA и проксирует API.
+# HTTPS включается автоматически:
+#   • SITE_ADDRESS=localhost      → локальный внутренний CA Caddy (dev по HTTPS);
+#   • SITE_ADDRESS=reports.dom.ru → сертификат Let's Encrypt/ZeroSSL сам по ACME.
+# Значение приходит из окружения (см. .env / docker-compose.yml).
+
+{$SITE_ADDRESS:localhost} {
+	# Сжатие ответов (zstd для поддерживающих, иначе gzip)
+	encode zstd gzip
+
+	# /api/* → backend:3000, префикс /api снимается handle_path'ом:
+	#   /api/auth/login → GET http://backend:3000/auth/login
+	handle_path /api/* {
+		reverse_proxy backend:3000
+	}
+
+	# SPA: есть файл — отдаём его, нет — index.html (history-режим vue-router)
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Хэшированные ассеты Vite (/assets/app.[hash].js) — кэш на год
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	# Логи в stdout в человекочитаемом виде (собираются docker logs)
+	log {
+		output stdout
+		format console
+	}
+}

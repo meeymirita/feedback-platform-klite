@@ -1,0 +1,21 @@
+# Не попадает в build-контекст образа frontend
+# ВНИМАНИЕ: Caddyfile здесь НЕ указан — он нужен образу (COPY Caddyfile ...)
+node_modules
+dist
+dist-ssr
+coverage
+playwright-report
+test-results
+.git
+.gitignore
+.gitattributes
+Dockerfile
+.dockerignore
+.env
+.env.*
+.idea
+.vscode
+*.local
+*.log
+npm-debug.log*
+*.md

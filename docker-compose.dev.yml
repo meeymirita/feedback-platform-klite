@@ -1,0 +1,42 @@
+# ─────────────────────────────────────────────────────────────
+# Overlay для локальной разработки. Запуск:
+#     docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Отличия от прод-стека:
+#   • собирается стадия `development` образов (dev-зависимости внутри);
+#   • исходники монтируются с хоста (bind-mount) → правки видны сразу;
+#   • backend  — nest start --watch (авто-перезапуск);
+#   • frontend — Vite dev-server c HMR, слушает :80 внутри контейнера,
+#                поэтому наружу так же доступен на http://localhost:${HTTP_PORT:-8080}
+# ─────────────────────────────────────────────────────────────
+services:
+  backend:
+    build:
+      target: development
+    image: meeymirita/feedback-klite-backend:dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./backend:/app
+      # node_modules берём из образа, а не с хоста (разные ОС/арх)
+      - meeymirita_backend_node_modules:/app/node_modules
+
+  frontend:
+    build:
+      target: development
+    image: meeymirita/feedback-klite-frontend:dev
+    environment:
+      NODE_ENV: development
+    # Vite слушает 80, чтобы совпасть с проброшенным портом из базового compose
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "80"]
+    # В dev нет Caddy/TLS — только Vite по HTTP. !override заменяет список портов
+    # из базового файла (иначе он бы дополнился неиспользуемым 443).
+    ports: !override
+      - "${HTTP_PORT:-8080}:80"
+    volumes:
+      - ./frontend:/app
+      - meeymirita_frontend_node_modules:/app/node_modules
+
+volumes:
+  meeymirita_backend_node_modules:
+  meeymirita_frontend_node_modules:

@@ -1,2 +1,90 @@
+# ─────────────────────────────────────────────────────────────
+# Производственный стек: PostgreSQL + backend (NestJS) + frontend (nginx).
+# Запуск:  docker compose up --build -d
+# Точка входа:  http://localhost:${HTTP_PORT:-8080}
+# ─────────────────────────────────────────────────────────────
+name: meeymirita-feedback-platform-klite
+
 services:
-  
+  # ── База данных ────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: meeymirita-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-reports}
+      POSTGRES_USER: ${POSTGRES_USER:-mira}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mira}
+      TZ: ${TZ:-Europe/Moscow}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - meeymirita_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mira} -d ${POSTGRES_DB:-reports}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [meeymirita-net]
+
+  # ── API ───────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      target: production
+    image: meeymirita/feedback-klite-backend:latest
+    container_name: meeymirita-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      TZ: ${TZ:-Europe/Moscow}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://mira:mira@postgres:5432/reports}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-reports}
+      POSTGRES_USER: ${POSTGRES_USER:-mira}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mira}
+      JWT_SECRET: ${JWT_SECRET:-dev_insecure_secret_change_me}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_insecure_refresh_change_me}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+    ports:
+      # Прямой доступ к API в обход nginx — удобно для отладки/Postman
+      - "${BACKEND_PORT:-3000}:3000"
+    init: true
+    networks: [meeymirita-net]
+
+  # ── Веб / реверс-прокси / TLS (Caddy) ─────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      target: production
+    image: meeymirita/feedback-klite-frontend:latest
+    container_name: meeymirita-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      # localhost → внутренний CA Caddy; реальный домен → Let's Encrypt/ZeroSSL
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+      TZ: ${TZ:-Europe/Moscow}
+    ports:
+      - "${HTTP_PORT:-8080}:80"     # HTTP: редирект на HTTPS + ACME-челлендж
+      - "${HTTPS_PORT:-8443}:443"   # HTTPS: точка входа приложения
+    volumes:
+      - meeymirita_caddy_data:/data      # сертификаты и состояние ACME (persist!)
+      - meeymirita_caddy_config:/config  # автосохранённая конфигурация Caddy
+    networks: [meeymirita-net]
+
+volumes:
+  meeymirita_pgdata:
+  meeymirita_caddy_data:
+  meeymirita_caddy_config:
+
+networks:
+  meeymirita-net:
+    driver: bridge
