@@ -1,6 +1,6 @@
 generator client {
   provider     = "prisma-client"
-  output       = "../generated/prisma"
+  output       = "../src/generated/prisma"
   // NestJS собирается в CommonJS (в package.json нет "type": "module")
   moduleFormat = "cjs"
 }

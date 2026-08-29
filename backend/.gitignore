@@ -56,7 +56,7 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Prisma 7: сгенерированный клиент (provider = "prisma-client")
-/generated
+/src/generated
 
 # Локальные agent-скиллы Prisma CLI (скачиваются инструментами, как node_modules)
 /.agents/
