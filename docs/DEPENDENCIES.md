@@ -146,6 +146,7 @@
 | `vue` | `^3.5.40` | Фреймворк Vue 3 (Composition API, Single-File Components). |
 | `vue-router` | `^5.2.0` | Клиентский роутинг SPA. Используется `createWebHistory` → нужен SPA-fallback в Caddy. |
 | `pinia` | `^4.0.2` | Управление состоянием (стор). Указан в стеке ТЗ (п. 6). |
+| `tailwindcss` | `^4.3.3` | Utility-first CSS. v4: конфиг в CSS (`@import 'tailwindcss'` в `src/assets/main.css`), без `tailwind.config.js`. |
 
 ---
 
@@ -161,6 +162,7 @@
 | `@vitejs/plugin-vue` | `^6.0.8` | Поддержка `.vue` SFC в Vite. |
 | `@vitejs/plugin-vue-jsx` | `^5.1.6` | Поддержка JSX/TSX в компонентах Vue. |
 | `vite-plugin-vue-devtools` | `^8.1.5` | Встраивание панели Vue DevTools в dev-сервер. |
+| `@tailwindcss/vite` | `^4.3.3` | Плагин Vite для Tailwind v4 — сканирует шаблоны и генерирует CSS без PostCSS-конфига. Подключён в `vite.config.ts`. |
 | `npm-run-all2` | `^9.0.2` | `run-p` / `run-s` — параллельный и последовательный запуск npm-скриптов (`build`, `lint`). |
 | `jiti` | `^2.7.0` | Рантайм-загрузчик TS/ESM — нужен ESLint, чтобы читать flat config в `.ts` (`eslint.config.ts`). |
 

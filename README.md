@@ -14,6 +14,7 @@
 | [`docs/PLAN.md`](docs/PLAN.md) | **С чего начать** — пошаговый план разработки от скелета до MVP |
 | [`docs/DOCKER.md`](docs/DOCKER.md) | Построчная документация по всем Docker-файлам |
 | [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | Все библиотеки проекта с версиями и назначением |
+| [`docs/FRONTEND_STRUCTURE.md`](docs/FRONTEND_STRUCTURE.md) | Структура папок `frontend/src/` — что куда класть |
 
 ## Структура
 
@@ -29,7 +30,7 @@
 ├── docker-compose.yml       — прод-стек: postgres + backend + frontend (Caddy)
 ├── docker-compose.dev.yml   — overlay для разработки (watch/HMR, bind-mount)
 ├── .env.example             — образец переменных окружения
-├── docs/                    — TZ, PLAN, DOCKER, DEPENDENCIES
+├── docs/                    — TZ, PLAN, DOCKER, DEPENDENCIES, FRONTEND_STRUCTURE
 └── README.md
 ```
 

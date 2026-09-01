@@ -1,10 +1,11 @@
 @import './base.css';
+@import 'tailwindcss';
 
-#app {
-  font-weight: normal;
-}
-
-a {
-  color: var(--color-text);
-  text-decoration: none;
+/* Палитра проекта (по макету из Claude Design). v4: токены в CSS, без tailwind.config.js.
+   Дают классы bg-ink / text-brand / border-line / hover:bg-brand-hover и т.п. */
+@theme {
+  --color-ink: #1b1f26; /* тёмная панель, основной текст */
+  --color-brand: #b5322c; /* акцент: кнопки, ссылки, лого */
+  --color-brand-hover: #8f2521;
+  --color-line: #dfe2e8; /* границы полей и карточек */
 }
