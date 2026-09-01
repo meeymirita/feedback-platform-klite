@@ -1,9 +1,12 @@
+import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
 export const useReportEntriesStore = defineStore('reportEntries', () => {
   // Демо-данные для вёрстки. Общий источник для «Мои записи» и «Недельный
   // отчёт» — это одни и те же записи, просто в разном виде.
-  const days = [
+  // ref() обязателен: без него Pinia не считает это состоянием, и
+  // storeToRefs() во view просто не найдёт days.
+  const days = ref([
     {
       name: 'Понедельник',
       date: '31.08.2026',
@@ -99,6 +102,6 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
         },
       ],
     },
-  ]
+  ])
   return { days }
 })
