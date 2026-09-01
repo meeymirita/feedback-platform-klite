@@ -1,47 +1,8 @@
 <script setup lang="ts">
-// Демо-данные. Те же записи, что в «Мои записи», только в виде таблицы.
-const days = [
-  {
-    name: 'Понедельник',
-    total: '5:25',
-    rows: [
-      { domain: 'ggs-service.ru', link: 'bitrix24 · #123123123', time: '1:55' },
-      { domain: 'stena-nso.ru', link: 'bitrix24 · #123145900', time: '3:30' },
-    ],
-  },
-  {
-    name: 'Вторник',
-    total: '5:20',
-    rows: [
-      { domain: 'condor-nsk.ru', link: 'bitrix24 · #123150411', time: '3:50' },
-      { domain: 'dkedra.ru', link: 'bitrix24 · #123151002', time: '1:30' },
-    ],
-  },
-  {
-    name: 'Среда',
-    total: '5:25',
-    rows: [
-      { domain: 'biomaster.pro', link: 'bitrix24 · #123160877', time: '3:00' },
-      { domain: 'ggs-service.ru', link: 'bitrix24 · #123161340', time: '2:25' },
-    ],
-  },
-  {
-    name: 'Четверг',
-    total: '5:40',
-    rows: [
-      { domain: 'stena-nso.ru', link: 'bitrix24 · #123170255', time: '4:25' },
-      { domain: 'dkedra.ru', link: 'bitrix24 · #123170980', time: '1:15' },
-    ],
-  },
-  {
-    name: 'Пятница',
-    total: '5:45',
-    rows: [
-      { domain: 'condor-nsk.ru', link: 'bitrix24 · #123180114', time: '3:15' },
-      { domain: 'biomaster.pro', link: 'bitrix24 · #123180677', time: '2:30' },
-    ],
-  },
-]
+import { storeToRefs } from 'pinia'
+import { useReportEntriesStore } from '@/stores/reportEntries'
+
+const { days } = storeToRefs(useReportEntriesStore())
 </script>
 
 <template>

@@ -1,49 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import EmployeeModal from '@/components/employee/EmployeeModal.vue'
-// Демо-данные. `active: false` — заблокированный сотрудник.
-const employees = [
-  {
-    initials: 'СА',
-    name: 'Соколов Артём Игоревич',
-    email: 'a.sokolov@kontur-group.ru',
-    role: 'Сотрудник',
-    last: '31.08.2026',
-    active: true,
-  },
-  {
-    initials: 'МД',
-    name: 'Мельникова Дарья Сергеевна',
-    email: 'd.melnikova@kontur-group.ru',
-    role: 'Сотрудник',
-    last: '31.08.2026',
-    active: true,
-  },
-  {
-    initials: 'ГН',
-    name: 'Гаврилов Никита Павлович',
-    email: 'n.gavrilov@kontur-group.ru',
-    role: 'Сотрудник',
-    last: '28.08.2026',
-    active: false,
-  },
-  {
-    initials: 'ТО',
-    name: 'Ткачук Ольга Владимировна',
-    email: 'o.tkachuk@kontur-group.ru',
-    role: 'Админ',
-    last: '31.08.2026',
-    active: true,
-  },
-  {
-    initials: 'ЕП',
-    name: 'Ерёмин Павел Андреевич',
-    email: 'p.eremin@kontur-group.ru',
-    role: 'Сотрудник',
-    last: '—',
-    active: true,
-  },
-]
+import { useEmployeesStore } from '@/stores/employees'
+
+const { employees } = storeToRefs(useEmployeesStore())
 
 const showEmployeeModal = ref(false)
 </script>
