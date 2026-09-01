@@ -27,7 +27,7 @@ function loginAs(role: 'employee' | 'admin') {
       class="flex flex-col justify-between bg-ink px-8 py-12 text-[#f5f6f8] lg:px-[60px] lg:py-14"
     >
       <div class="flex items-center gap-3">
-        <div class="h-7 w-7 rounded-[7px] bg-brand"></div>
+        <img src="@/assets/images/logo.png" alt="" class="h-7 w-7 rounded-[7px] object-cover" />
         <span class="text-[15px] font-semibold tracking-[0.01em]">Отчётность</span>
       </div>
 
