@@ -1,9 +1,32 @@
 <script setup lang="ts">
-// Модалка «Смена пароля». Только вёрстка.
-defineEmits<{ close: [] }>()
+// Модалка смены пароля: админ задаёт сотруднику новый пароль.
+import { ref, reactive, computed } from 'vue'
+import type { Employee } from '@/types/employee'
+
+const props = defineProps<{ employee: Employee }>()
+const emit = defineEmits<{ close: []; submit: [password: string] }>()
 
 const field =
   'h-[38px] rounded-lg border border-line px-3 text-sm outline-none focus:border-brand'
+
+const form = reactive({ next: '', repeat: '' })
+const submitted = ref(false)
+const errors = computed(() => ({
+  next: form.next.length < 8,
+  repeat: !form.repeat || form.repeat !== form.next,
+}))
+const hasErrors = computed(() => Object.values(errors.value).some(Boolean))
+const showError = (k: keyof typeof errors.value) => submitted.value && errors.value[k]
+
+function save() {
+  if (hasErrors.value) {
+    submitted.value = true
+    return
+  }
+  emit('submit', form.next)
+  emit('close')
+}
+const invalid = '!border-[#c8442f]'
 </script>
 
 <template>
@@ -13,7 +36,7 @@ const field =
   >
     <div class="w-full max-w-[380px] overflow-hidden rounded-xl bg-white shadow-2xl">
       <div class="flex items-center justify-between border-b border-[#eceef2] px-5 py-4">
-        <div class="text-base font-semibold">Смена пароля</div>
+        <div class="text-base font-semibold">Смена пароля — {{ props.employee.name }}</div>
         <button
           class="flex h-7 w-7 items-center justify-center rounded-md bg-[#f4f5f7] text-[#6b7280] hover:bg-[#eceef2]"
           @click="$emit('close')"
@@ -24,17 +47,21 @@ const field =
 
       <div class="flex flex-col gap-3.5 px-5 py-5">
         <label class="flex flex-col gap-1.5">
-          <span class="text-xs font-medium text-[#4b5563]">Текущий пароль</span>
-          <input type="password" :class="field" />
-        </label>
-        <label class="flex flex-col gap-1.5">
           <span class="text-xs font-medium text-[#4b5563]">Новый пароль</span>
-          <input type="password" :class="field" />
+          <input
+            type="password"
+            v-model="form.next"
+            :class="[field, showError('next') && invalid]"
+          />
           <span class="text-[11.5px] text-[#9aa1ad]">Минимум 8 символов</span>
         </label>
         <label class="flex flex-col gap-1.5">
           <span class="text-xs font-medium text-[#4b5563]">Повторите новый пароль</span>
-          <input type="password" :class="field" />
+          <input
+            type="password"
+            v-model="form.repeat"
+            :class="[field, showError('repeat') && invalid]"
+          />
         </label>
       </div>
 
@@ -46,6 +73,7 @@ const field =
           Отмена
         </button>
         <button
+          @click="save"
           class="h-[38px] rounded-lg bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover"
         >
           Сменить пароль

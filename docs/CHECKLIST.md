@@ -61,12 +61,12 @@
 - [x] CRUD-экшены в сторах: `reportEntries` — плоский `entries[]`, `days` как `computed`, `addEntry` / `updateEntry` / `deleteEntry` (ветка `frontend/entries-crud`)
 - [x] `types/` — общие интерфейсы: `ReportEntry` / `ReportDay` (`types/report.ts`), `Employee` (`types/employee.ts`); утилиты `utils/time.ts`, `utils/date.ts`
 - [x] `EntryModal`: `v-model` + валидация + сабмит → `addEntry` / `updateEntry`; «Изменить» / «Удалить» на строках `EntriesView`; `utils/date.ts` — `toISODate` / `fromISODate` (ветка `frontend/entry-modal`)
+- [x] `EmployeeModal` + `PasswordModal`: `v-model` + валидация + сабмит → `addEmployee` / `updateEmployee` / `setPassword`; `id` в `Employee`, инициалы из ФИО; «Изменить» / «Пароль» на строках `EmployeesView` (ветка `frontend/employee-modal`). Блокировка сотрудников убрана
 
 ### В работе / дальше
 
-- [~] Модалки `EmployeeModal` / `PasswordModal` — только вёрстка, без `v-model`, валидации, сабмита
 - [ ] Auth-стор + гард (`meta.requiresAuth` / `meta.roles`) — TODO в `router/index.ts`
 - [ ] API-слой (`api/` пустой), замена демо-данных на запросы к бэку
-- [ ] Кнопки «Скачать в Excel», стрелки переключения недели, «Изменить» / «Удалить», «войти как …» — без обработчиков
+- [ ] Кнопки «Скачать в Excel», стрелки переключения недели, «войти как …» — без обработчиков
 - [ ] Drill-down из сводного отчёта (нет маршрута `/employees/:id/weekly`)
 - [ ] Адаптив формы записи под телефон ([`TZ.md` §7](TZ.md)); тесты (vitest настроен, тестов нет)
