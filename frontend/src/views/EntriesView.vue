@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import EntryModal from '@/components/report/EntryModal.vue'
-import { useReportEntriesStore, MY_EMPLOYEE_ID } from '@/stores/reportEntries'
+import { useReportEntriesStore } from '@/stores/reportEntries'
 import { useNotificationsStore } from '@/stores/notifications'
 import { plural } from '@/utils/plural'
 import type { ReportEntry } from '@/types/report'
@@ -14,8 +14,10 @@ const { days, weekLabel, weekTotal, isCurrentWeek, canGoNext } = storeToRefs(sto
 // экшены — напрямую со store
 const { addEntry, updateEntry, deleteEntry, prevWeek, nextWeek } = store
 
-// «Мои записи» — всегда мой отчёт (мог остаться чужой после drill-down сводного)
-store.setViewEmployee()
+onMounted(() => {
+  store.setViewEmployee() // «Мои записи» — всегда мой отчёт
+  store.load().catch(() => notify.error('Не удалось загрузить записи'))
+})
 
 const showEntryModal = ref(false)
 const editing = ref<ReportEntry | null>(null)
@@ -28,19 +30,27 @@ function openEdit(row: ReportEntry) {
   editing.value = row
   showEntryModal.value = true
 }
-function onSubmit(data: Omit<ReportEntry, 'id' | 'employeeId'>) {
-  if (editing.value) {
-    updateEntry(editing.value.id, data)
-    notify.success('Запись обновлена')
-  } else {
-    addEntry({ ...data, employeeId: MY_EMPLOYEE_ID })
-    notify.success('Запись добавлена')
+async function onSubmit(data: Omit<ReportEntry, 'id' | 'employeeId'>) {
+  try {
+    if (editing.value) {
+      await updateEntry(editing.value.id, data)
+      notify.success('Запись обновлена')
+    } else {
+      await addEntry(data)
+      notify.success('Запись добавлена')
+    }
+  } catch (e) {
+    notify.error(e instanceof Error ? e.message : 'Не удалось сохранить запись')
   }
 }
-function onDelete(row: ReportEntry) {
+async function onDelete(row: ReportEntry) {
   if (!confirm(`Удалить запись «${row.domain}»?`)) return
-  deleteEntry(row.id)
-  notify.info('Запись удалена')
+  try {
+    await deleteEntry(row.id)
+    notify.info('Запись удалена')
+  } catch (e) {
+    notify.error(e instanceof Error ? e.message : 'Не удалось удалить запись')
+  }
 }
 </script>
 

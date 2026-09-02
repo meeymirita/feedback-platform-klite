@@ -1,231 +1,148 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import type { ReportEntry, ReportDay } from '@/types/report'
+import { useAuthStore } from '@/stores/auth'
+import * as entriesApi from '@/api/reportEntries'
 import { toMinutes, fromMinutes } from '@/utils/time'
-import { weekdayName, parseDmy, addDays, mondayOf, weekRangeLabel } from '@/utils/date'
+import {
+  weekdayName,
+  parseDmy,
+  addDays,
+  mondayOf,
+  weekRangeLabel,
+  toISODate,
+  fromISODate,
+} from '@/utils/date'
 
-// Без авторизации «мои записи» и обычный /weekly показывают одного демо-сотрудника.
-// Позже заменится на authStore.currentUser.id.
-export const MY_EMPLOYEE_ID = '1'
+// Раньше это был id демо-сотрудника. Оставлен, чтобы EntriesView не переписывать —
+// бэкенд всё равно берёт автора записи из сессии.
+export const MY_EMPLOYEE_ID = ''
+
+// Date -> 'YYYY-MM-DD' по локальным частям (без сдвига на UTC).
+function isoLocal(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+// Запись с бэка -> форма, в которой её ждут вьюхи (dmy-дата, время 'ч:мм', desc).
+function toRow(e: entriesApi.ApiEntry): ReportEntry {
+  return {
+    id: e.id,
+    employeeId: e.userId,
+    date: fromISODate(e.date.slice(0, 10)),
+    domain: e.domain,
+    link: e.link,
+    desc: e.description,
+    time: fromMinutes(e.minutes),
+  }
+}
 
 export const useReportEntriesStore = defineStore('reportEntries', () => {
-  const entries = ref<ReportEntry[]>([
-    {
-      id: '1',
-      employeeId: '1',
-      date: '31.08.2026',
-      domain: 'ggs-service.ru',
-      link: 'bitrix24 · #123123123',
-      desc: 'Правки на главной: заменил баннер, пересобрал блок услуг',
-      time: '1:55',
-    },
-    {
-      id: '2',
-      employeeId: '1',
-      date: '31.08.2026',
-      domain: 'stena-nso.ru',
-      link: 'bitrix24 · #123145900',
-      desc: 'Собрал каталог из выгрузки, настроил фильтры по типу панелей',
-      time: '3:30',
-    },
-    {
-      id: '3',
-      employeeId: '2',
-      date: '01.09.2026',
-      domain: 'condor-nsk.ru',
-      link: 'bitrix24 · #123150411',
-      desc: 'Перенёс сайт на новый хостинг, проверил редиректы и SSL',
-      time: '3:50',
-    },
-    {
-      id: '4',
-      employeeId: '4',
-      date: '01.09.2026',
-      domain: 'dkedra.ru',
-      link: 'bitrix24 · #123151002',
-      desc: 'Правки в форме заявки, подключил уведомления на почту',
-      time: '1:30',
-    },
-    {
-      id: '5',
-      employeeId: '1',
-      date: '02.09.2026',
-      domain: 'biomaster.pro',
-      link: 'bitrix24 · #123160877',
-      desc: 'Вёрстка страницы «Оборудование» по макету',
-      time: '3:00',
-    },
-    {
-      id: '6',
-      employeeId: '2',
-      date: '02.09.2026',
-      domain: 'ggs-service.ru',
-      link: 'bitrix24 · #123161340',
-      desc: 'Скорость загрузки: сжал изображения, отложил сторонние скрипты',
-      time: '2:25',
-    },
-    {
-      id: '7',
-      employeeId: '1',
-      date: '03.09.2026',
-      domain: 'stena-nso.ru',
-      link: 'bitrix24 · #123170255',
-      desc: 'Интеграция с 1С: сопоставил номенклатуру, настроил расписание обмена',
-      time: '4:25',
-    },
-    {
-      id: '8',
-      employeeId: '2',
-      date: '03.09.2026',
-      domain: 'dkedra.ru',
-      link: 'bitrix24 · #123170980',
-      desc: 'Мелкие правки по замечаниям заказчика',
-      time: '1:15',
-    },
-    {
-      id: '9',
-      employeeId: '1',
-      date: '04.09.2026',
-      domain: 'condor-nsk.ru',
-      link: 'bitrix24 · #123180114',
-      desc: 'Настроил цели в Метрике, собрал отчёт по заявкам за август',
-      time: '3:15',
-    },
-    {
-      id: '10',
-      employeeId: '4',
-      date: '04.09.2026',
-      domain: 'biomaster.pro',
-      link: 'bitrix24 · #123180677',
-      desc: 'Обновил каталог: 24 новых товара, перепроверил цены',
-      time: '2:30',
-    },
-    // предыдущая неделя (Пн 24.08 — Пт 28.08.2026)
-    {
-      id: 'p1',
-      employeeId: '1',
-      date: '24.08.2026',
-      domain: 'ggs-service.ru',
-      link: 'bitrix24 · #123090114',
-      desc: 'Настроил форму обратной связи, подключил антиспам',
-      time: '2:10',
-    },
-    {
-      id: 'p2',
-      employeeId: '2',
-      date: '25.08.2026',
-      domain: 'dkedra.ru',
-      link: 'bitrix24 · #123091250',
-      desc: 'Обновил раздел новостей и галерею объектов',
-      time: '1:40',
-    },
-    {
-      id: 'p3',
-      employeeId: '1',
-      date: '26.08.2026',
-      domain: 'condor-nsk.ru',
-      link: 'bitrix24 · #123092777',
-      desc: 'SEO-правки: мета-теги, микроразметка каталога',
-      time: '3:20',
-    },
-    {
-      id: 'p4',
-      employeeId: '4',
-      date: '27.08.2026',
-      domain: 'stena-nso.ru',
-      link: 'bitrix24 · #123093140',
-      desc: 'Интеграция оплаты, прогнал тестовые платежи',
-      time: '4:00',
-    },
-    {
-      id: 'p5',
-      employeeId: '2',
-      date: '28.08.2026',
-      domain: 'biomaster.pro',
-      link: 'bitrix24 · #123094905',
-      desc: 'Правки по замечаниям заказчика, выкатил на прод',
-      time: '2:35',
-    },
-  ])
+  const auth = useAuthStore()
+
+  // Записи текущей выбранной недели (только мои — бэкенд другого не отдаёт).
+  const rows = ref<ReportEntry[]>([])
 
   const weekOffset = ref(0) // 0 — неделя с «сегодня», −1 предыдущая, …
   const weekStart = computed(() => addDays(mondayOf(new Date()), weekOffset.value * 7))
   const isCurrentWeek = computed(() => weekOffset.value === 0)
   const canGoNext = computed(() => weekOffset.value < 0) // вперёд текущей не пускаем
+  const weekLabel = computed(() => weekRangeLabel(weekStart.value))
+
+  // Чей отчёт смотрим. Пока всегда мой; drill-down чужого — этап «Сводный отчёт».
+  const viewEmployeeId = ref('')
+  function setViewEmployee(id?: string) {
+    viewEmployeeId.value = id || auth.user?.id || ''
+  }
+
+  // Загрузка записей выбранной недели с бэкенда.
+  async function load() {
+    const from = isoLocal(weekStart.value)
+    const to = isoLocal(addDays(weekStart.value, 6)) // Пн..Вс включительно
+    const list = await entriesApi.listEntries(from, to)
+    rows.value = list.map(toRow)
+  }
+
+  // при смене недели — перезагрузка
+  watch(weekStart, () => {
+    void load()
+  })
+
   function prevWeek() {
     weekOffset.value--
   }
   function nextWeek() {
     if (canGoNext.value) weekOffset.value++
   }
-  const weekLabel = computed(() => weekRangeLabel(weekStart.value))
 
-  // чей отчёт смотрим: свой (MY_EMPLOYEE_ID) или чужой из drill-down сводного
-  const viewEmployeeId = ref(MY_EMPLOYEE_ID)
-  function setViewEmployee(id?: string) {
-    viewEmployeeId.value = id || MY_EMPLOYEE_ID
-  }
-
-  // все записи выбранной недели (Пн–Пт), без фильтра по сотруднику — для сводного
-  const weekEntriesAll = computed(() => {
-    const start = weekStart.value
-    const end = addDays(start, 5) // [start, start+5) = Пн..Пт
-    return entries.value.filter((e) => {
-      const t = parseDmy(e.date)
-      return t >= start && t < end
-    })
-  })
-  // записи недели одного сотрудника — для «Мои записи» / недельного отчёта
-  const weekEntries = computed(() =>
-    weekEntriesAll.value.filter((e) => e.employeeId === viewEmployeeId.value),
-  )
-
+  // Записи недели, сгруппированные по дням (Пн→Пт по порядку).
   const days = computed<ReportDay[]>(() => {
     const byDate = new Map<string, ReportEntry[]>()
-    for (const e of weekEntries.value) {
+    for (const e of rows.value) {
       if (!byDate.has(e.date)) byDate.set(e.date, [])
       byDate.get(e.date)!.push(e)
     }
     return [...byDate.entries()]
       .sort((a, b) => +parseDmy(a[0]) - +parseDmy(b[0]))
-      .map(([date, rows]) => ({
+      .map(([date, list]) => ({
         name: weekdayName(date),
         date,
-        total: fromMinutes(rows.reduce((s, r) => s + toMinutes(r.time), 0)),
-        rows,
+        total: fromMinutes(list.reduce((s, r) => s + toMinutes(r.time), 0)),
+        rows: list,
       }))
   })
 
-  function addEntry(data: Omit<ReportEntry, 'id'>) {
-    entries.value.push({ id: crypto.randomUUID(), ...data })
-  }
-  function updateEntry(id: string, patch: Partial<Omit<ReportEntry, 'id'>>) {
-    const e = entries.value.find((x) => x.id === id)
-    if (e) Object.assign(e, patch)
-  }
-  function deleteEntry(id: string) {
-    entries.value = entries.value.filter((x) => x.id !== id)
-  }
   const weekTotal = computed(() =>
-    fromMinutes(weekEntries.value.reduce((s, e) => s + toMinutes(e.time), 0)),
+    fromMinutes(rows.value.reduce((s, e) => s + toMinutes(e.time), 0)),
   )
-  const weekCount = computed(() => weekEntries.value.length)
+  const weekCount = computed(() => rows.value.length)
+
+  // Совместимость со stores/summary (сводный отчёт). Пока это только мои записи —
+  // корректные данные для сводного появятся на этапе «Сводный отчёт».
+  const weekEntriesAll = computed(() => rows.value)
+
+  async function addEntry(data: Omit<ReportEntry, 'id' | 'employeeId'>) {
+    await entriesApi.createEntry({
+      date: toISODate(data.date),
+      domain: data.domain,
+      link: data.link,
+      description: data.desc,
+      minutes: toMinutes(data.time),
+    })
+    await load()
+  }
+
+  async function updateEntry(id: string, patch: Partial<Omit<ReportEntry, 'id' | 'employeeId'>>) {
+    await entriesApi.updateEntry(id, {
+      date: patch.date ? toISODate(patch.date) : undefined,
+      domain: patch.domain,
+      link: patch.link,
+      description: patch.desc,
+      minutes: patch.time ? toMinutes(patch.time) : undefined,
+    })
+    await load()
+  }
+
+  async function deleteEntry(id: string) {
+    await entriesApi.deleteEntry(id)
+    await load()
+  }
 
   return {
-    entries,
     days,
-    addEntry,
-    updateEntry,
-    deleteEntry,
     weekLabel,
     weekTotal,
     weekCount,
     weekEntriesAll,
     isCurrentWeek,
     canGoNext,
-    prevWeek,
-    nextWeek,
     viewEmployeeId,
     setViewEmployee,
+    prevWeek,
+    nextWeek,
+    load,
+    addEntry,
+    updateEntry,
+    deleteEntry,
   }
 })
