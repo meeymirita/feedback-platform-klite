@@ -58,11 +58,11 @@
 - [x] Экраны (вёрстка + демо-данные): `HomeView` (форма входа), `EntriesView`, `WeeklyReportView`, `EmployeesView`, `SummaryView`, `NotFoundView` (дизайн 404)
 - [x] Pinia-сторы с демо-данными: `reportEntries` (общий для «Мои записи» и «Недельный отчёт»), `employees`, `summary` — чтение через `storeToRefs`
 - [x] Ассеты: `logo.png` (256×256), `404.webp`
+- [x] CRUD-экшены в сторах: `reportEntries` — плоский `entries[]`, `days` как `computed`, `addEntry` / `updateEntry` / `deleteEntry` (ветка `frontend/entries-crud`)
+- [x] `types/` — общие интерфейсы: `ReportEntry` / `ReportDay` (`types/report.ts`), `Employee` (`types/employee.ts`); утилиты `utils/time.ts`, `utils/date.ts`
 
 ### В работе / дальше
 
-- [ ] CRUD-экшены в сторах (`addEntry` / `updateEntry` / `deleteEntry`) — **текущая ветка**
-- [ ] `types/` — общие интерфейсы (`ReportEntry`, `Employee`) — **текущая ветка**
 - [~] Модалки `EntryModal` / `EmployeeModal` / `PasswordModal` — только вёрстка, без `v-model`, валидации, сабмита
 - [ ] Auth-стор + гард (`meta.requiresAuth` / `meta.roles`) — TODO в `router/index.ts`
 - [ ] API-слой (`api/` пустой), замена демо-данных на запросы к бэку

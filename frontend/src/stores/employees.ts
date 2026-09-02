@@ -1,11 +1,12 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
+import type { Employee } from '@/types/employee.ts'
 
 export const useEmployeesStore = defineStore('employees', () => {
   // Демо-данные для вёрстки. `active: false` — заблокированный сотрудник.
   // ref() обязателен: без него Pinia не считает это состоянием, и
   // storeToRefs() во view просто не найдёт employees.
-  const employees = ref([
+  const employees = ref<Employee[]>([
     {
       initials: 'СА',
       name: 'Соколов Артём Игоревич',
