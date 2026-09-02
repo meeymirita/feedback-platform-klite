@@ -63,12 +63,16 @@
 - [x] `EntryModal`: `v-model` + валидация + сабмит → `addEntry` / `updateEntry`; «Изменить» / «Удалить» на строках `EntriesView`; `utils/date.ts` — `toISODate` / `fromISODate` (ветка `frontend/entry-modal`)
 - [x] `EmployeeModal` + `PasswordModal`: `v-model` + валидация + сабмит → `addEmployee` / `updateEmployee` / `setPassword`; `id` в `Employee`, инициалы из ФИО; «Изменить» / «Пароль» на строках `EmployeesView` (ветка `frontend/employee-modal`). Блокировка сотрудников убрана
 
-### В работе / дальше
+### В работе / дальше (фронт, на демо-данных)
 
-- [ ] Auth-стор + гард (`meta.requiresAuth` / `meta.roles`) — TODO в `router/index.ts`
-- [ ] API-слой (`api/` пустой), замена демо-данных на запросы к бэку
-- [ ] Кнопки «Скачать в Excel», стрелки переключения недели, «войти как …» — без обработчиков
-- [ ] Drill-down из сводного отчёта (нет маршрута `/employees/:id/weekly`)
+- [ ] Переключение недели: оффсет + фильтр `entries`, «Итого за неделю» из стора
+- [ ] Drill-down из сводного отчёта: маршрут `/employees/:id/weekly`, `employeeId` в записях
+- [ ] Кнопка «Скачать в Excel» — клиентский `.xlsx`
 - [ ] Тесты (vitest настроен, тестов нет)
+
+### В самом конце
+
+- [ ] Регистрация / авторизация: auth-стор, роут-гард (`meta.requiresAuth` / `meta.roles`), форма входа, «войти как …»
+- [ ] API-слой (`api/` пустой), замена демо-данных на запросы к бэку
 
 > Адаптив под телефон ([`TZ.md` §7](TZ.md)) — не делаем: приложение только под ПК.
