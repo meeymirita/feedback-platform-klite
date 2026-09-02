@@ -1,7 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { authApi } from '@/api/auth'
-import { ApiError } from '@/api/http'
 import type { AuthUser, Credentials, UserRole } from '@/types/auth'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -17,18 +16,15 @@ export const useAuthStore = defineStore('auth', () => {
   // Дедуп: main.ts и роутер-гард могут дёрнуть fetchMe одновременно на старте.
   let inflight: Promise<void> | null = null
 
-  // Проверка сессии по куке. 401 → гость, остальные ошибки пробрасываем.
+  // Проверка сессии по куке. Любая ошибка (401 или бэкенд недоступен) →
+  // считаем гостем, не роняем загрузку приложения.
   function fetchMe(): Promise<void> {
     if (inflight) return inflight
     inflight = (async () => {
       try {
         user.value = await authApi.me()
-      } catch (e) {
-        if (e instanceof ApiError && e.status === 401) {
-          user.value = null
-        } else {
-          throw e
-        }
+      } catch {
+        user.value = null
       } finally {
         ready.value = true
       }
