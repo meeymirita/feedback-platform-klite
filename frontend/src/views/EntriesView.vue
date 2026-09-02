@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import EntryModal from '@/components/report/EntryModal.vue'
-import { useReportEntriesStore } from '@/stores/reportEntries'
+import { useReportEntriesStore, MY_EMPLOYEE_ID } from '@/stores/reportEntries'
 import type { ReportEntry } from '@/types/report.ts'
 
 const store = useReportEntriesStore()
@@ -10,6 +10,9 @@ const store = useReportEntriesStore()
 const { days, weekLabel, weekTotal, isCurrentWeek, canGoNext } = storeToRefs(store)
 // экшены — напрямую со store
 const { addEntry, updateEntry, deleteEntry, prevWeek, nextWeek } = store
+
+// «Мои записи» — всегда мой отчёт (мог остаться чужой после drill-down сводного)
+store.setViewEmployee()
 
 const showEntryModal = ref(false)
 const editing = ref<ReportEntry | null>(null)
@@ -22,9 +25,9 @@ function openEdit(row: ReportEntry) {
   editing.value = row
   showEntryModal.value = true
 }
-function onSubmit(data: Omit<ReportEntry, 'id'>) {
+function onSubmit(data: Omit<ReportEntry, 'id' | 'employeeId'>) {
   if (editing.value) updateEntry(editing.value.id, data)
-  else addEntry(data)
+  else addEntry({ ...data, employeeId: MY_EMPLOYEE_ID })
 }
 function onDelete(row: ReportEntry) {
   if (confirm(`Удалить запись «${row.domain}»?`)) deleteEntry(row.id)

@@ -4,10 +4,15 @@ import type { ReportEntry, ReportDay } from '@/types/report'
 import { toMinutes, fromMinutes } from '@/utils/time'
 import { weekdayName, parseDmy, addDays, mondayOf, weekRangeLabel } from '@/utils/date'
 
+// Без авторизации «мои записи» и обычный /weekly показывают одного демо-сотрудника.
+// Позже заменится на authStore.currentUser.id.
+export const MY_EMPLOYEE_ID = '1'
+
 export const useReportEntriesStore = defineStore('reportEntries', () => {
   const entries = ref<ReportEntry[]>([
     {
       id: '1',
+      employeeId: '1',
       date: '31.08.2026',
       domain: 'ggs-service.ru',
       link: 'bitrix24 · #123123123',
@@ -16,6 +21,7 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
     },
     {
       id: '2',
+      employeeId: '1',
       date: '31.08.2026',
       domain: 'stena-nso.ru',
       link: 'bitrix24 · #123145900',
@@ -24,6 +30,7 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
     },
     {
       id: '3',
+      employeeId: '2',
       date: '01.09.2026',
       domain: 'condor-nsk.ru',
       link: 'bitrix24 · #123150411',
@@ -32,6 +39,7 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
     },
     {
       id: '4',
+      employeeId: '4',
       date: '01.09.2026',
       domain: 'dkedra.ru',
       link: 'bitrix24 · #123151002',
@@ -40,6 +48,7 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
     },
     {
       id: '5',
+      employeeId: '1',
       date: '02.09.2026',
       domain: 'biomaster.pro',
       link: 'bitrix24 · #123160877',
@@ -48,6 +57,7 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
     },
     {
       id: '6',
+      employeeId: '2',
       date: '02.09.2026',
       domain: 'ggs-service.ru',
       link: 'bitrix24 · #123161340',
@@ -56,6 +66,7 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
     },
     {
       id: '7',
+      employeeId: '1',
       date: '03.09.2026',
       domain: 'stena-nso.ru',
       link: 'bitrix24 · #123170255',
@@ -64,6 +75,7 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
     },
     {
       id: '8',
+      employeeId: '2',
       date: '03.09.2026',
       domain: 'dkedra.ru',
       link: 'bitrix24 · #123170980',
@@ -72,6 +84,7 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
     },
     {
       id: '9',
+      employeeId: '1',
       date: '04.09.2026',
       domain: 'condor-nsk.ru',
       link: 'bitrix24 · #123180114',
@@ -80,6 +93,7 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
     },
     {
       id: '10',
+      employeeId: '4',
       date: '04.09.2026',
       domain: 'biomaster.pro',
       link: 'bitrix24 · #123180677',
@@ -89,6 +103,7 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
     // предыдущая неделя (Пн 24.08 — Пт 28.08.2026)
     {
       id: 'p1',
+      employeeId: '1',
       date: '24.08.2026',
       domain: 'ggs-service.ru',
       link: 'bitrix24 · #123090114',
@@ -97,6 +112,7 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
     },
     {
       id: 'p2',
+      employeeId: '2',
       date: '25.08.2026',
       domain: 'dkedra.ru',
       link: 'bitrix24 · #123091250',
@@ -105,6 +121,7 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
     },
     {
       id: 'p3',
+      employeeId: '1',
       date: '26.08.2026',
       domain: 'condor-nsk.ru',
       link: 'bitrix24 · #123092777',
@@ -113,6 +130,7 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
     },
     {
       id: 'p4',
+      employeeId: '4',
       date: '27.08.2026',
       domain: 'stena-nso.ru',
       link: 'bitrix24 · #123093140',
@@ -121,6 +139,7 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
     },
     {
       id: 'p5',
+      employeeId: '2',
       date: '28.08.2026',
       domain: 'biomaster.pro',
       link: 'bitrix24 · #123094905',
@@ -139,7 +158,16 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
   function nextWeek() {
     if (canGoNext.value) weekOffset.value++
   }
-  const weekEntries = computed(() => {
+  const weekLabel = computed(() => weekRangeLabel(weekStart.value))
+
+  // чей отчёт смотрим: свой (MY_EMPLOYEE_ID) или чужой из drill-down сводного
+  const viewEmployeeId = ref(MY_EMPLOYEE_ID)
+  function setViewEmployee(id?: string) {
+    viewEmployeeId.value = id || MY_EMPLOYEE_ID
+  }
+
+  // все записи выбранной недели (Пн–Пт), без фильтра по сотруднику — для сводного
+  const weekEntriesAll = computed(() => {
     const start = weekStart.value
     const end = addDays(start, 5) // [start, start+5) = Пн..Пт
     return entries.value.filter((e) => {
@@ -147,7 +175,10 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
       return t >= start && t < end
     })
   })
-  const weekLabel = computed(() => weekRangeLabel(weekStart.value))
+  // записи недели одного сотрудника — для «Мои записи» / недельного отчёта
+  const weekEntries = computed(() =>
+    weekEntriesAll.value.filter((e) => e.employeeId === viewEmployeeId.value),
+  )
 
   const days = computed<ReportDay[]>(() => {
     const byDate = new Map<string, ReportEntry[]>()
@@ -189,9 +220,12 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
     weekLabel,
     weekTotal,
     weekCount,
+    weekEntriesAll,
     isCurrentWeek,
     canGoNext,
     prevWeek,
     nextWeek,
+    viewEmployeeId,
+    setViewEmployee,
   }
 })
