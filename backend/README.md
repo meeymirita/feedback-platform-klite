@@ -31,6 +31,20 @@
 $ npm install
 ```
 
+## База данных
+
+```bash
+# синхронизировать схему с БД (без миграций)
+$ npx prisma db push
+# сгенерировать клиент
+$ npx prisma generate
+# создать суперпользователя MIRA (данные — SEED_MIRA_* в .env; идемпотентно)
+$ npm run seed
+```
+
+`prisma/seed.ts` заводит единственного пользователя с ролью `MIRA` (upsert по
+email). Второго `MIRA` создать нельзя — сид упадёт, если роль занята другим email.
+
 ## Compile and run the project
 
 ```bash

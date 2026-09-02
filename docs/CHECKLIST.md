@@ -29,18 +29,19 @@
 - [x] Каркас: `ConfigModule` (global, `expandVariables`), глобальный `ValidationPipe`, `cookie-parser`
 - [x] Сессии: `express-session` + `connect-redis` + `RedisStore`, CORS с `credentials` — в `main.ts`
 - [x] `PrismaModule` + `PrismaService`
-- [x] Prisma-схема курса: `User` / `Account` / `Token`; enum `UserRole (REGULAR|ADMIN)`, `AuthMethod`, `TokenType`
-- [x] Регистрация: `POST /auth/register` — проверка email, argon2-хэш, создание `User`, сохранение сессии
-- [x] `UserService`: `findById` / `findByEmail` / `create`
+- [x] Prisma-схема сведена к минимуму: `User` (`id/email/password/displayName/role`); enum `UserRole (USER|ADMIN|MIRA)`. `Account` / `Token` / `AuthMethod` / `TokenType` удалены
+- [x] Регистрация: `POST /api/v1/auth/register` — проверка email, argon2-хэш, создание `User`, сохранение сессии
+- [x] `UserService`: `findById` / `findByEmail` / `create` (пароль наружу не отдаётся — `omit`)
+- [x] `AuthGuard` (сессия) + `@Roles` / `RolesGuard` + `@Authorization()` — `src/auth/guard`, `src/auth/decorators`
+- [x] `login` / `logout` работают (сессия в Redis, чистка куки); `refresh` / `change-password` не нужны при сессионной модели
+- [x] Сид суперпользователя MIRA: `npm run seed` (`prisma/seed.ts`) — идемпотентный upsert, MIRA в системе один
+- [x] Глобальный префикс `/api/v1` (`app.setGlobalPrefix`), Caddy `handle /api/*` без среза
 - [x] Утилиты `libs/common` (is-dev, ms, parseBoolean), декоратор совпадения паролей, DTO `login`/`register`
 
 ### Не сделано (по [`PLAN.md`](PLAN.md) фазы 1–4, 7–8)
 
 - [ ] Схема под [`TZ.md` §4](TZ.md): нет модели `ReportEntry`; роль `REGULAR` вместо `EMPLOYEE`; нет `fullName` / `isActive`
-- [ ] Миграции не создавались (`prisma/migrations/` пуст), БД кодом не поднята
-- [ ] `auth.login()` / `auth.logout()` — пустые заглушки; нет `refresh`, `change-password`
-- [ ] Нет `SessionGuard`, `@Roles` / `RolesGuard`, `@Public`
-- [ ] Нет сида первого админа
+- [ ] Миграции не создавались (`prisma/migrations/` пуст) — БД поднимается через `prisma db push`
 - [ ] Нет эндпоинтов `report-entries` (CRUD), `reports/weekly`, экспортов `.xlsx`
 - [ ] `UserController` пустой — нет CRUD пользователей, `list` / `setActive` / `setPassword`
 - [ ] Нет глобального фильтра исключений и логгера ошибок
