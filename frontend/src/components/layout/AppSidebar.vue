@@ -1,12 +1,42 @@
 <script setup lang="ts">
-// Боковое меню. Пункты — маршруты с meta.nav из router/index.ts.
+// Боковое меню. Пункты — маршруты с meta.nav из router/index.ts,
+// плюс фильтр по роли: то, на что гард всё равно не пустит, не показываем.
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import type { UserRole } from '@/types/auth'
 
 const route = useRoute()
-// flatMap — разворачиваем на один уровень.
-const nav = useRouter()
-  .options.routes.flatMap((r) => r.children ?? [r])
-  .filter((r) => r.meta?.nav)
+const router = useRouter()
+const auth = useAuthStore()
+
+const nav = computed(() =>
+  router.options.routes
+    .flatMap((r) => r.children ?? [r]) // разворачиваем вложенные маршруты на уровень
+    .filter((r) => r.meta?.nav)
+    .filter((r) => !r.meta?.roles || (auth.role && r.meta.roles.includes(auth.role))),
+)
+
+const roleLabel: Record<UserRole, string> = {
+  USER: 'Сотрудник',
+  ADMIN: 'Админ',
+  MIRA: 'Владелец',
+}
+
+const initials = computed(() => {
+  const name = auth.user?.displayName ?? ''
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('')
+})
+
+async function onLogout() {
+  await auth.logout()
+  router.push({ name: 'login' })
+}
 </script>
 
 <template>
@@ -37,30 +67,24 @@ const nav = useRouter()
     </nav>
 
     <!-- Карточка пользователя -->
-    <div class="mt-auto flex flex-col gap-3">
+    <div v-if="auth.user" class="mt-auto flex flex-col gap-3">
       <div class="flex items-center gap-2.5 rounded-lg border border-[#e8eaef] bg-[#fafbfc] p-2.5">
         <div
           class="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-[#f8e8e6] text-xs font-semibold text-brand"
         >
-          СА
+          {{ initials }}
         </div>
         <div class="min-w-0">
-          <div class="truncate text-[12.5px] font-medium">Соколов Артём Игоревич</div>
-          <div class="text-[11px] text-[#6b7280]">Сотрудник</div>
+          <div class="truncate text-[12.5px] font-medium">{{ auth.user.displayName }}</div>
+          <div class="text-[11px] text-[#6b7280]">{{ roleLabel[auth.user.role] }}</div>
         </div>
       </div>
-      <div class="flex gap-2">
-        <button
-          class="h-[30px] flex-1 rounded-md border border-line bg-white text-xs hover:border-brand hover:text-brand"
-        >
-          Пароль
-        </button>
-        <button
-          class="h-[30px] flex-1 rounded-md border border-line bg-white text-xs hover:border-brand hover:text-brand"
-        >
-          Выйти
-        </button>
-      </div>
+      <button
+        class="h-[30px] rounded-md border border-line bg-white text-xs hover:border-brand hover:text-brand"
+        @click="onLogout"
+      >
+        Выйти
+      </button>
     </div>
   </aside>
 </template>

@@ -6,7 +6,8 @@ import type { Employee } from '@/types/employee'
 const props = defineProps<{ employee?: Employee }>()
 const emit = defineEmits<{
   close: []
-  submit: [data: Pick<Employee, 'name' | 'email' | 'role'>]
+  // пароль здесь отдельным полем — он не часть Employee, живёт только до отправки
+  submit: [data: { name: string; email: string; role: Employee['role']; password: string }]
 }>()
 
 const field = 'h-[38px] rounded-lg border border-line px-3 text-sm outline-none focus:border-brand'
@@ -44,6 +45,7 @@ function save() {
     name: form.name.trim(),
     email: form.email.trim(),
     role: form.role,
+    password: tempPwd.value,
   })
   emit('close')
 }

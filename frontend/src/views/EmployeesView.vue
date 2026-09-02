@@ -6,11 +6,12 @@ import { useEmployeesStore } from '@/stores/employees'
 import { useNotificationsStore } from '@/stores/notifications'
 import PasswordModal from '@/components/ui/PasswordModal.vue'
 import type { Employee } from '@/types/employee'
+import { createUser } from '@/api/users'
 
 const store = useEmployeesStore()
 const notify = useNotificationsStore()
 const { employees } = storeToRefs(store)
-const { addEmployee, updateEmployee, setPassword } = store
+const { updateEmployee, setPassword } = store
 
 const showEmployeeModal = ref(false)
 const editing = ref<Employee | null>(null)
@@ -24,13 +25,27 @@ function openEdit(emp: Employee) {
   editing.value = emp
   showEmployeeModal.value = true
 }
-function onSubmit(data: Pick<Employee, 'name' | 'email' | 'role'>) {
+async function onSubmit(data: {
+  name: string
+  email: string
+  role: Employee['role']
+  password: string
+}) {
   if (editing.value) {
-    updateEmployee(editing.value.id, data)
+    updateEmployee(editing.value.id, { name: data.name, email: data.email, role: data.role })
     notify.success('Данные сотрудника обновлены')
-  } else {
-    addEmployee(data)
-    notify.success('Сотрудник добавлен')
+    return
+  }
+  try {
+    await createUser({
+      displayName: data.name,
+      email: data.email,
+      password: data.password,
+      role: data.role === 'Админ' ? 'ADMIN' : 'USER',
+    })
+    notify.success('Аккаунт создан. Передай пароль сотруднику.')
+  } catch (e) {
+    notify.error(e instanceof Error ? e.message : 'Не удалось создать аккаунт')
   }
 }
 function onPassword(password: string) {

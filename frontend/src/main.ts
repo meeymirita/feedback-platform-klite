@@ -8,6 +8,8 @@ import Toast, { POSITION, type PluginOptions } from 'vue-toastification'
 
 import App from './App.vue'
 import router from './router'
+import { setUnauthorizedHandler } from './api/http'
+import { useAuthStore } from './stores/auth'
 
 const app = createApp(App)
 
@@ -28,4 +30,16 @@ const toastOptions: PluginOptions = {
 }
 app.use(Toast, toastOptions)
 
-app.mount('#app')
+// 401 из любого запроса → сбрасываем пользователя; редирект сделает роутер-гард
+// при следующей навигации.
+setUnauthorizedHandler(() => {
+  useAuthStore().clearOnUnauthorized()
+})
+
+// Проверяем сессию по куке ДО первого рендера — иначе мигнёт страница входа.
+async function bootstrap() {
+  await useAuthStore().fetchMe()
+  await router.isReady()
+  app.mount('#app')
+}
+void bootstrap()
