@@ -1,14 +1,12 @@
 <script setup lang="ts">
-// Боковое меню. Какой пункт подсвечен — передаётся пропом `active`.
-// Ссылки пока просто <a href="#">, роутинг подключишь позже.
-defineProps<{ active?: 'entries' | 'weekly' | 'employees' | 'summary' }>()
+// Боковое меню. Пункты — маршруты с meta.nav из router/index.ts.
+import { useRoute, useRouter } from 'vue-router'
 
-const nav = [
-  { key: 'entries', label: 'Мои записи' },
-  { key: 'weekly', label: 'Недельный отчёт' },
-  { key: 'employees', label: 'Сотрудники' },
-  { key: 'summary', label: 'Сводный отчёт' },
-]
+const route = useRoute()
+// flatMap — разворачиваем на один уровень.
+const nav = useRouter()
+  .options.routes.flatMap((r) => r.children ?? [r])
+  .filter((r) => r.meta?.nav)
 </script>
 
 <template>
@@ -17,25 +15,25 @@ const nav = [
   >
     <!-- Лого -->
     <div class="flex items-center gap-2.5 px-2">
-      <div class="h-6 w-6 rounded-md bg-brand"></div>
+      <img src="@/assets/images/logo.png" alt="" class="h-6 w-6 rounded-md object-cover" />
       <span class="text-sm font-semibold tracking-[0.01em]">Отчётность</span>
     </div>
 
     <!-- Навигация -->
     <nav class="flex flex-col gap-0.5">
-      <a
+      <RouterLink
         v-for="item in nav"
-        :key="item.key"
-        href="#"
+        :key="item.path"
+        :to="{ name: item.name }"
         class="rounded-md px-2.5 py-2 text-[13.5px]"
         :class="
-          active === item.key
+          route.name === item.name
             ? 'bg-[#fbecea] font-semibold text-[#8f2521]'
             : 'text-[#3d434c] hover:bg-black/[0.03]'
         "
       >
-        {{ item.label }}
-      </a>
+        {{ item.meta?.label }}
+      </RouterLink>
     </nav>
 
     <!-- Карточка пользователя -->

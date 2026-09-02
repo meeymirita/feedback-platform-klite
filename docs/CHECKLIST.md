@@ -8,7 +8,7 @@
 
 > **Активная разработка сейчас — только фронтенд** (ветки `frontend/*`).
 > Бэкенд — заготовка с авторизационного курса, к ТЗ ещё не приведён (см. раздел ниже).
-> Фронтенд-работа пока не влита в `main`.
+> Фронтенд-ветки по мере готовности вливаются в `main` (ветки не удаляются).
 
 ---
 
@@ -49,7 +49,7 @@
 
 ## Фронтенд ← активная работа
 
-### Готово (ветки `frontend/routing`, `frontend/stores`)
+### Готово (ветки `frontend/routing`, `frontend/stores`, `frontend/entries-crud`)
 
 - [x] Стек: Vue 3 + TS + Vite + Pinia + vue-router + Tailwind v4, алиас `@/`
 - [x] Роутинг: `login` (`/`) вне каркаса; `DefaultLayout` (сайдбар + `<RouterView>`) — родитель для `entries` / `weekly` / `employees` / `summary`; catch-all 404
@@ -58,11 +58,11 @@
 - [x] Экраны (вёрстка + демо-данные): `HomeView` (форма входа), `EntriesView`, `WeeklyReportView`, `EmployeesView`, `SummaryView`, `NotFoundView` (дизайн 404)
 - [x] Pinia-сторы с демо-данными: `reportEntries` (общий для «Мои записи» и «Недельный отчёт»), `employees`, `summary` — чтение через `storeToRefs`
 - [x] Ассеты: `logo.png` (256×256), `404.webp`
+- [x] CRUD-экшены в сторах: `reportEntries` — плоский `entries[]`, `days` как `computed`, `addEntry` / `updateEntry` / `deleteEntry` (ветка `frontend/entries-crud`)
+- [x] `types/` — общие интерфейсы: `ReportEntry` / `ReportDay` (`types/report.ts`), `Employee` (`types/employee.ts`); утилиты `utils/time.ts`, `utils/date.ts`
 
 ### В работе / дальше
 
-- [ ] CRUD-экшены в сторах (`addEntry` / `updateEntry` / `deleteEntry`) — **текущая ветка**
-- [ ] `types/` — общие интерфейсы (`ReportEntry`, `Employee`) — **текущая ветка**
 - [~] Модалки `EntryModal` / `EmployeeModal` / `PasswordModal` — только вёрстка, без `v-model`, валидации, сабмита
 - [ ] Auth-стор + гард (`meta.requiresAuth` / `meta.roles`) — TODO в `router/index.ts`
 - [ ] API-слой (`api/` пустой), замена демо-данных на запросы к бэку
