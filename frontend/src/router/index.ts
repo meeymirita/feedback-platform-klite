@@ -53,6 +53,13 @@ const router = createRouter({
           component: () => import('@/views/SummaryView.vue'),
           meta: { nav: true, label: 'Сводный отчёт'},
         },
+        {
+          // drill-down из сводного отчёта: недельный отчёт конкретного сотрудника
+          path: 'employees/:id/weekly',
+          name: 'employee-weekly',
+          component: () => import('@/views/WeeklyReportView.vue'),
+          meta: { nav: false, label: 'Отчёт сотрудника'},
+        },
       ],
     },
     {

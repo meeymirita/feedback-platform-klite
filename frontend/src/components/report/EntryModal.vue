@@ -5,7 +5,8 @@ import { toMinutes, fromMinutes } from '@/utils/time'
 import { toISODate, fromISODate } from '@/utils/date'
 
 const props = defineProps<{ entry?: ReportEntry }>()
-const emit = defineEmits<{ close: []; submit: [data: Omit<ReportEntry, 'id'>] }>()
+// employeeId проставляет родитель (EntriesView) — модалка про сотрудника не знает
+const emit = defineEmits<{ close: []; submit: [data: Omit<ReportEntry, 'id' | 'employeeId'>] }>()
 
 const invalid = '!border-[#c8442f]'
 

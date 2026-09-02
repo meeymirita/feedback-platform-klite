@@ -1,10 +1,24 @@
 <script setup lang="ts">
+import { computed, watchEffect, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useRoute } from 'vue-router'
 import { useReportEntriesStore } from '@/stores/reportEntries'
+import { useEmployeesStore } from '@/stores/employees'
 
+const route = useRoute()
 const store = useReportEntriesStore()
-const { days, weekLabel, weekTotal, weekCount, canGoNext } = storeToRefs(store)
+const { days, weekLabel, weekTotal, weekCount, canGoNext, viewEmployeeId } = storeToRefs(store)
 const { prevWeek, nextWeek } = store
+
+// drill-down: /employees/:id/weekly показывает чужой отчёт; обычный /weekly — мой
+const drillId = computed(() => (route.params.id ? String(route.params.id) : undefined))
+watchEffect(() => store.setViewEmployee(drillId.value))
+onBeforeUnmount(() => store.setViewEmployee()) // вернуть просмотр на «меня»
+
+const employees = useEmployeesStore()
+const employeeName = computed(
+  () => employees.employees.find((e) => e.id === viewEmployeeId.value)?.name ?? '—',
+)
 </script>
 
 <template>
@@ -13,6 +27,13 @@ const { prevWeek, nextWeek } = store
       <!-- Заголовок -->
       <div class="flex flex-wrap items-end justify-between gap-6">
         <div class="flex flex-col gap-1.5">
+          <RouterLink
+            v-if="drillId"
+            :to="{ name: 'summary' }"
+            class="text-[12px] text-[#6b7280] no-underline hover:text-brand"
+          >
+            ← Сводный отчёт
+          </RouterLink>
           <h1 class="text-[21px] font-semibold tracking-[-0.01em]">Недельный отчёт</h1>
           <p class="text-[13px] text-[#6b7280]">
             Рабочая неделя Пн–Пт. Только просмотр и выгрузка.
@@ -47,7 +68,7 @@ const { prevWeek, nextWeek } = store
             →
           </button>
         </div>
-        <span class="text-xs text-[#6b7280]">Соколов Артём Игоревич</span>
+        <span class="text-xs text-[#6b7280]">{{ employeeName }}</span>
       </div>
 
       <!-- Таблица -->

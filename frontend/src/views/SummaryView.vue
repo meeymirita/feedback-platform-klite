@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useSummaryStore } from '@/stores/summary'
+import { useReportEntriesStore } from '@/stores/reportEntries'
 
-const { summary: rows } = storeToRefs(useSummaryStore())
+const { summary: rows, companyCount, companyTotal } = storeToRefs(useSummaryStore())
+
+const reportEntries = useReportEntriesStore()
+const { weekLabel, canGoNext } = storeToRefs(reportEntries)
+const { prevWeek, nextWeek } = reportEntries
 </script>
 
 <template>
@@ -28,13 +33,20 @@ const { summary: rows } = storeToRefs(useSummaryStore())
         class="flex items-center justify-between gap-4 rounded-[9px] border border-[#e6e8ed] bg-white px-3.5 py-2.5"
       >
         <div class="flex items-center gap-2.5">
-          <button class="h-[30px] w-[30px] rounded-md border border-line hover:border-brand">
+          <button
+            @click="prevWeek"
+            class="h-[30px] w-[30px] rounded-md border border-line hover:border-brand"
+          >
             ←
           </button>
           <span class="min-w-[172px] text-center font-mono text-[13px] font-medium">
-            31.08 — 04.09.2026
+            {{ weekLabel }}
           </span>
-          <button class="h-[30px] w-[30px] rounded-md border border-line hover:border-brand">
+          <button
+            @click="nextWeek"
+            :disabled="!canGoNext"
+            class="h-[30px] w-[30px] rounded-md border border-line hover:border-brand disabled:cursor-not-allowed disabled:opacity-40"
+          >
             →
           </button>
         </div>
@@ -52,10 +64,11 @@ const { summary: rows } = storeToRefs(useSummaryStore())
           <div class="text-right">Загрузка</div>
         </div>
 
-        <div
+        <RouterLink
           v-for="row in rows"
-          :key="row.name"
-          class="grid grid-cols-[1fr_120px_150px_170px] items-center gap-3.5 border-t border-[#f1f2f5] px-4 py-3 hover:bg-[#f7f8fb]"
+          :key="row.id"
+          :to="{ name: 'employee-weekly', params: { id: row.id } }"
+          class="grid grid-cols-[1fr_120px_150px_170px] items-center gap-3.5 border-t border-[#f1f2f5] px-4 py-3 text-inherit no-underline hover:bg-[#f7f8fb]"
         >
           <div class="flex min-w-0 items-center gap-2.5">
             <div
@@ -82,13 +95,13 @@ const { summary: rows } = storeToRefs(useSummaryStore())
               {{ row.pct }}%
             </span>
           </div>
-        </div>
+        </RouterLink>
 
         <!-- Итог -->
         <div class="grid grid-cols-[1fr_120px_150px] gap-3.5 bg-ink px-4 py-3.5 text-white">
           <div class="text-[13px] font-semibold">Всего по компании</div>
-          <div class="text-right font-mono text-[13px] text-[#9aa1ad]">22</div>
-          <div class="text-right font-mono text-[15px] font-medium">59:45</div>
+          <div class="text-right font-mono text-[13px] text-[#9aa1ad]">{{ companyCount }}</div>
+          <div class="text-right font-mono text-[15px] font-medium">{{ companyTotal }}</div>
         </div>
       </div>
     </div>
