@@ -4,12 +4,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
+import { UserService } from '@/user/user.service';
 import { CreateReportEntryDto } from './dto/create-report-entry.dto';
 import { UpdateReportEntryDto } from './dto/update-report-entry.dto';
 
 @Injectable()
 export class ReportEntryService {
-  public constructor(private readonly prisma: PrismaService) {}
+  public constructor(
+    private readonly prisma: PrismaService,
+    private readonly userService: UserService,
+  ) {}
 
   // Записи одного пользователя за период [from, to] включительно.
   findRange(userId: string, from: string, to: string) {
@@ -19,6 +23,28 @@ export class ReportEntryService {
         date: { gte: new Date(from), lte: new Date(to) },
       },
       orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  // Сводка по всем сотрудникам (кроме MIRA) за период: сколько записей и минут
+  // у каждого. Сотрудники без записей тоже в списке — с нулями.
+  async summary(from: string, to: string) {
+    const users = await this.userService.findAll(); // без MIRA
+    const grouped = await this.prisma.reportEntry.groupBy({
+      by: ['userId'],
+      where: { date: { gte: new Date(from), lte: new Date(to) } },
+      _count: { _all: true },
+      _sum: { minutes: true },
+    });
+    const byUser = new Map(grouped.map((g) => [g.userId, g]));
+    return users.map((u) => {
+      const g = byUser.get(u.id);
+      return {
+        userId: u.id,
+        displayName: u.displayName,
+        count: g?._count._all ?? 0,
+        minutes: g?._sum.minutes ?? 0,
+      };
     });
   }
 
