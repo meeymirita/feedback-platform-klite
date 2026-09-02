@@ -4,7 +4,8 @@ import { storeToRefs } from 'pinia'
 import EntryModal from '@/components/report/EntryModal.vue'
 import { useReportEntriesStore, MY_EMPLOYEE_ID } from '@/stores/reportEntries'
 import { useNotificationsStore } from '@/stores/notifications'
-import type { ReportEntry } from '@/types/report.ts'
+import { plural } from '@/utils/plural'
+import type { ReportEntry } from '@/types/report'
 
 const store = useReportEntriesStore()
 const notify = useNotificationsStore()
@@ -105,7 +106,9 @@ function onDelete(row: ReportEntry) {
             <div class="flex items-baseline gap-2.5">
               <span class="text-[13.5px] font-semibold">{{ day.name }}</span>
               <span class="font-mono text-xs text-[#9aa1ad]">{{ day.date }}</span>
-              <span class="text-xs text-[#9aa1ad]">{{ day.rows.length }} записи</span>
+              <span class="text-xs text-[#9aa1ad]">
+                {{ day.rows.length }} {{ plural(day.rows.length, ['запись', 'записи', 'записей']) }}
+              </span>
             </div>
             <span class="font-mono text-[13px] font-medium">{{ day.total }}</span>
           </div>

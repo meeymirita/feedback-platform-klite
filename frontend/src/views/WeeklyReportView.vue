@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
 import { useReportEntriesStore } from '@/stores/reportEntries'
 import { useEmployeesStore } from '@/stores/employees'
+import { plural } from '@/utils/plural'
 
 const route = useRoute()
 const store = useReportEntriesStore()
@@ -30,7 +31,7 @@ const employeeName = computed(
           <RouterLink
             v-if="drillId"
             :to="{ name: 'summary' }"
-            class="text-[12px] text-[#6b7280] no-underline hover:text-brand"
+            class="text-[12px] text-[#6b7280] hover:text-brand"
           >
             ← Сводный отчёт
           </RouterLink>
@@ -112,7 +113,9 @@ const employeeName = computed(
 
         <!-- Итог за неделю -->
         <div class="grid grid-cols-[1fr_96px] gap-4 bg-ink px-4 py-3.5 text-white">
-          <div class="text-[13px] font-semibold">Итого за неделю · {{ weekCount }} записей</div>
+          <div class="text-[13px] font-semibold">
+            Итого за неделю · {{ weekCount }} {{ plural(weekCount, ['запись', 'записи', 'записей']) }}
+          </div>
           <div class="text-right font-mono text-[15px] font-medium">{{ weekTotal }}</div>
         </div>
       </div>

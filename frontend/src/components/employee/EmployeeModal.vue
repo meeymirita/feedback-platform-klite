@@ -3,14 +3,14 @@
 import { ref, reactive, computed } from 'vue'
 import type { Employee } from '@/types/employee'
 
-const field =
-  'h-[38px] rounded-lg border border-line px-3 text-sm outline-none focus:border-brand'
-
 const props = defineProps<{ employee?: Employee }>()
 const emit = defineEmits<{
   close: []
   submit: [data: Pick<Employee, 'name' | 'email' | 'role'>]
 }>()
+
+const field = 'h-[38px] rounded-lg border border-line px-3 text-sm outline-none focus:border-brand'
+const invalid = '!border-[#c8442f]' // рамка невалидного поля
 
 const isEdit = !!props.employee
 const form = reactive({
@@ -47,8 +47,6 @@ function save() {
   })
   emit('close')
 }
-
-const invalid = '!border-[#c8442f]'
 </script>
 
 <template>
