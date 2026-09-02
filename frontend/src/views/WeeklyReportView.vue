@@ -7,6 +7,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
 import { listUsers } from '@/api/users'
 import { plural } from '@/utils/plural'
+import EntryViewModal from '@/components/report/EntryViewModal.vue'
+import type { ReportEntry } from '@/types/report'
 
 const route = useRoute()
 const store = useReportEntriesStore()
@@ -34,6 +36,9 @@ watchEffect(async () => {
 const employeeName = computed(() =>
   drillId.value ? drillName.value : (auth.user?.displayName ?? ''),
 )
+
+// клик по строке — просмотр записи целиком
+const viewing = ref<ReportEntry | null>(null)
 </script>
 
 <template>
@@ -103,20 +108,21 @@ const employeeName = computed(() =>
           <div
             v-for="(row, i) in day.rows"
             :key="row.id"
-            class="grid grid-cols-[150px_1fr_320px_96px] gap-4 border-t border-[#f4f5f7] px-4 py-2.5 first:border-t-0"
+            class="grid cursor-pointer grid-cols-[150px_1fr_320px_96px] gap-4 border-t border-[#f4f5f7] px-4 py-2.5 first:border-t-0 hover:bg-[#fafbfc]"
+            @click="viewing = row"
           >
             <div class="text-[13.5px]" :class="i === 0 ? 'font-semibold' : 'text-[#9aa1ad]'">
               {{ i === 0 ? day.name : '' }}
             </div>
             <div class="min-w-0 text-[13.5px]">
               <div class="font-medium">{{ row.domain }}</div>
-              <div class="text-[12.5px] leading-relaxed text-[#6b7280] text-pretty">
+              <div class="line-clamp-2 text-[12.5px] leading-relaxed text-[#6b7280] text-pretty">
                 {{ row.desc }}
               </div>
             </div>
-            <a href="#" class="truncate font-mono text-[11.5px] text-brand hover:underline">
+            <span class="truncate font-mono text-[11.5px] text-[#9aa1ad]">
               {{ row.link }}
-            </a>
+            </span>
             <div class="text-right font-mono text-[13.5px]">{{ row.time }}</div>
           </div>
 
@@ -140,4 +146,6 @@ const employeeName = computed(() =>
       </div>
     </div>
   </main>
+
+  <EntryViewModal v-if="viewing" :entry="viewing" @close="viewing = null" />
 </template>
