@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { useReportEntriesStore } from '@/stores/reportEntries'
 import { getSummary, type SummaryRow as ApiSummaryRow } from '@/api/reports'
 import { fromMinutes } from '@/utils/time'
+import { initials } from '@/utils/initials'
 
 // 40 рабочих часов = полная загрузка (100% полоски)
 const FULL_WEEK_MIN = 40 * 60
@@ -14,15 +15,6 @@ export interface SummaryRow {
   count: number
   total: string
   pct: number
-}
-
-function initials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
 }
 
 export const useSummaryStore = defineStore('summary', () => {

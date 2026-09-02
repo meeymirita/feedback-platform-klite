@@ -4,6 +4,7 @@ import EmployeeModal from '@/components/employee/EmployeeModal.vue'
 import PasswordModal from '@/components/ui/PasswordModal.vue'
 import { useNotificationsStore } from '@/stores/notifications'
 import { listUsers, createUser, updateUser, resetPassword } from '@/api/users'
+import { initials } from '@/utils/initials'
 import type { AuthUser, UserRole } from '@/types/auth'
 
 const notify = useNotificationsStore()
@@ -24,15 +25,6 @@ onMounted(load)
 type RoleLabel = 'Сотрудник' | 'Админ'
 const roleRu = (r: UserRole): RoleLabel => (r === 'ADMIN' ? 'Админ' : 'Сотрудник')
 const roleEn = (label: RoleLabel): UserRole => (label === 'Админ' ? 'ADMIN' : 'USER')
-
-function initials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
-}
 
 const showEmployeeModal = ref(false)
 const editing = ref<AuthUser | null>(null)

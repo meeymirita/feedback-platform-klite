@@ -2,6 +2,7 @@ import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import type { ReportEntry, ReportDay } from '@/types/report'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationsStore } from '@/stores/notifications'
 import * as entriesApi from '@/api/reportEntries'
 import * as reportsApi from '@/api/reports'
 import { toMinutes, fromMinutes } from '@/utils/time'
@@ -11,6 +12,7 @@ import {
   addDays,
   mondayOf,
   weekRangeLabel,
+  isoLocal,
   toISODate,
   fromISODate,
 } from '@/utils/date'
@@ -18,12 +20,6 @@ import {
 // Раньше это был id демо-сотрудника. Оставлен, чтобы EntriesView не переписывать —
 // бэкенд всё равно берёт автора записи из сессии.
 export const MY_EMPLOYEE_ID = ''
-
-// Date -> 'YYYY-MM-DD' по локальным частям (без сдвига на UTC).
-function isoLocal(d: Date): string {
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
-}
 
 // Запись с бэка -> форма, в которой её ждут вьюхи (dmy-дата, время 'ч:мм', desc).
 function toRow(e: entriesApi.ApiEntry): ReportEntry {
@@ -41,7 +37,7 @@ function toRow(e: entriesApi.ApiEntry): ReportEntry {
 export const useReportEntriesStore = defineStore('reportEntries', () => {
   const auth = useAuthStore()
 
-  // Записи текущей выбранной недели (только мои — бэкенд другого не отдаёт).
+  // Записи выбранной недели (мои или, при drill-down, чужие).
   const rows = ref<ReportEntry[]>([])
 
   const weekOffset = ref(0) // 0 — неделя с «сегодня», −1 предыдущая, …
@@ -50,34 +46,40 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
   const canGoNext = computed(() => weekOffset.value < 0) // вперёд текущей не пускаем
   const weekLabel = computed(() => weekRangeLabel(weekStart.value))
 
-  // Период выбранной недели в ISO (Пн..Вс включительно) — для запросов.
+  // Период выбранной недели в ISO, Пн..Пт включительно (рабочая неделя).
   const weekRangeISO = computed(() => ({
     from: isoLocal(weekStart.value),
-    to: isoLocal(addDays(weekStart.value, 6)),
+    to: isoLocal(addDays(weekStart.value, 4)),
   }))
 
-  // Чей отчёт смотрим: пусто/свой id — мои записи; чужой id — drill-down
-  // из сводного (только ADMIN/MIRA).
-  const viewEmployeeId = ref('')
+  // Чей отчёт смотрим: свой id — мои записи; чужой id — drill-down из сводного
+  // (только ADMIN/MIRA). Инициализируем сразу собой.
+  const viewEmployeeId = ref(auth.user?.id ?? '')
   function setViewEmployee(id?: string) {
     viewEmployeeId.value = id || auth.user?.id || ''
   }
 
-  // Загрузка записей выбранной недели с бэкенда.
+  // Загрузка записей выбранной недели. Ошибку показываем тостом (вызывается
+  // из вотчера, вьюхе её не поймать).
   async function load() {
-    const { from, to } = weekRangeISO.value
-    const uid = viewEmployeeId.value
-    const mine = !uid || uid === auth.user?.id
-    const list = mine
-      ? await entriesApi.listEntries(from, to)
-      : await reportsApi.getUserEntries(uid, from, to)
-    rows.value = list.map(toRow)
+    try {
+      const { from, to } = weekRangeISO.value
+      const uid = viewEmployeeId.value
+      const mine = !uid || uid === auth.user?.id
+      const list = mine
+        ? await entriesApi.listEntries(from, to)
+        : await reportsApi.getUserEntries(uid, from, to)
+      rows.value = list.map(toRow)
+    } catch (e) {
+      useNotificationsStore().error(
+        e instanceof Error ? e.message : 'Не удалось загрузить записи',
+      )
+    }
   }
 
-  // перезагрузка при смене недели или просматриваемого сотрудника
-  watch([weekStart, viewEmployeeId], () => {
-    void load()
-  })
+  // Единственный триггер перезагрузки: смена недели или просматриваемого
+  // сотрудника. immediate — грузим сразу при создании стора.
+  watch([weekStart, viewEmployeeId], () => void load(), { immediate: true })
 
   function prevWeek() {
     weekOffset.value--

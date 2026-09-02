@@ -30,6 +30,24 @@ export function addDays(d: Date, n: number): Date {
   return r
 }
 
+// Date -> 'YYYY-MM-DD' по локальным частям (без сдвига на UTC).
+export function isoLocal(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+// сегодня в 'YYYY-MM-DD' (для дефолта в <input type="date">)
+export function todayISO(): string {
+  return isoLocal(new Date())
+}
+
+// day of week: 0=Вс, 6=Сб. Принимает 'YYYY-MM-DD'.
+export function isWeekend(iso: string): boolean {
+  const [y = 0, m = 0, d = 0] = iso.split('-').map(Number)
+  const day = new Date(y, m - 1, d).getDay()
+  return day === 0 || day === 6
+}
+
 // понедельник (00:00) недели, содержащей d
 export function mondayOf(d: Date): Date {
   const r = new Date(d.getFullYear(), d.getMonth(), d.getDate())

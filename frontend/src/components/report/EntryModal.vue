@@ -2,7 +2,7 @@
 import { ref, reactive, computed } from 'vue'
 import type { ReportEntry } from '@/types/report'
 import { toMinutes, fromMinutes } from '@/utils/time'
-import { toISODate, fromISODate } from '@/utils/date'
+import { toISODate, fromISODate, todayISO, isWeekend } from '@/utils/date'
 
 const props = defineProps<{ entry?: ReportEntry }>()
 // employeeId проставляет родитель (EntriesView) — модалка про сотрудника не знает
@@ -14,7 +14,7 @@ const invalid = '!border-[#c8442f]' // рамка невалидного пол�
 const isEdit = !!props.entry
 
 const form = reactive({
-  date: props.entry ? toISODate(props.entry.date) : new Date().toISOString().slice(0, 10),
+  date: props.entry ? toISODate(props.entry.date) : todayISO(),
   domain: props.entry?.domain ?? '',
   link: props.entry?.link ?? '',
   desc: props.entry?.desc ?? '',
@@ -25,7 +25,7 @@ const form = reactive({
 
 const timeOk = (t: string) => /^\d{1,2}:[0-5]\d$/.test(t) && toMinutes(t) > 0
 const errors = computed(() => ({
-  date: !form.date,
+  date: !form.date || isWeekend(form.date), // рабочая неделя Пн–Пт
   domain: !form.domain.trim(),
   desc: !form.desc.trim(),
   time: !timeOk(form.time),
@@ -83,6 +83,9 @@ function save() {
           <label class="flex flex-col gap-1.5">
             <span class="text-xs font-medium text-[#4b5563]">Дата</span>
             <input type="date" v-model="form.date" :class="[field, showError('date') && invalid]" />
+            <span v-if="showError('date')" class="text-[11px] text-[#c8442f]">
+              Рабочий день, Пн–Пт
+            </span>
           </label>
           <label class="flex flex-col gap-1.5">
             <span class="text-xs font-medium text-[#4b5563]">Домен проекта</span>

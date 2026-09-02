@@ -15,7 +15,7 @@ import { parseBoolean } from '@/libs/common/utils/parse-boolean.util';
 export class AuthService {
   public constructor(
     private readonly userService: UserService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
   ) {}
   public async login(req: Request, dto: LoginDto) {
     const user = await this.userService.findByEmail(dto.email);
@@ -39,8 +39,7 @@ export class AuthService {
         // Браузер удаляет куку, только если у очищающего Set-Cookie совпадают
         // name + domain + path с теми, что были при установке (см. main.ts).
         res.clearCookie(this.configService.getOrThrow<string>('SESSION_NAME'), {
-          domain:
-            this.configService.get<string>('SESSION_DOMAIN') || undefined,
+          domain: this.configService.get<string>('SESSION_DOMAIN') || undefined,
           path: '/',
           httpOnly: parseBoolean(
             this.configService.getOrThrow<string>('SESSION_HTTP_ONLY'),
