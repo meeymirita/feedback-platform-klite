@@ -19,6 +19,8 @@ model User {
   displayName String
   role        UserRole @default(USER)
 
+  entries ReportEntry[]
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -29,4 +31,23 @@ enum UserRole {
   USER
   ADMIN
   MIRA
+}
+
+// Одна задача сотрудника за день. Неделя/суммы считаются из выборки, отдельной
+// таблицы недельного отчёта нет.
+model ReportEntry {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime @db.Date
+  domain      String
+  link        String   @default("")
+  description String
+  minutes     Int // время на задачу в минутах
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, date])
+  @@map("report_entries")
 }
