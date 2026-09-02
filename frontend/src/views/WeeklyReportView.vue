@@ -2,7 +2,9 @@
 import { storeToRefs } from 'pinia'
 import { useReportEntriesStore } from '@/stores/reportEntries'
 
-const { days } = storeToRefs(useReportEntriesStore())
+const store = useReportEntriesStore()
+const { days, weekLabel, weekTotal, weekCount, canGoNext } = storeToRefs(store)
+const { prevWeek, nextWeek } = store
 </script>
 
 <template>
@@ -28,13 +30,20 @@ const { days } = storeToRefs(useReportEntriesStore())
         class="flex items-center justify-between gap-4 rounded-[9px] border border-[#e6e8ed] bg-white px-3.5 py-2.5"
       >
         <div class="flex items-center gap-2.5">
-          <button class="h-[30px] w-[30px] rounded-md border border-line hover:border-brand">
+          <button
+            @click="prevWeek"
+            class="h-[30px] w-[30px] rounded-md border border-line hover:border-brand"
+          >
             ←
           </button>
           <span class="min-w-[172px] text-center font-mono text-[13px] font-medium">
-            31.08 — 04.09.2026
+            {{ weekLabel }}
           </span>
-          <button class="h-[30px] w-[30px] rounded-md border border-line hover:border-brand">
+          <button
+            @click="nextWeek"
+            :disabled="!canGoNext"
+            class="h-[30px] w-[30px] rounded-md border border-line hover:border-brand disabled:cursor-not-allowed disabled:opacity-40"
+          >
             →
           </button>
         </div>
@@ -54,10 +63,10 @@ const { days } = storeToRefs(useReportEntriesStore())
         </div>
 
         <!-- Группы по дням -->
-        <div v-for="day in days" :key="day.name" class="border-b border-[#eceef2]">
+        <div v-for="day in days" :key="day.date" class="border-b border-[#eceef2]">
           <div
             v-for="(row, i) in day.rows"
-            :key="i"
+            :key="row.id"
             class="grid grid-cols-[150px_1fr_320px_96px] gap-4 border-t border-[#f4f5f7] px-4 py-2.5 first:border-t-0"
           >
             <div class="text-[13.5px]" :class="i === 0 ? 'font-semibold' : 'text-[#9aa1ad]'">
@@ -82,8 +91,8 @@ const { days } = storeToRefs(useReportEntriesStore())
 
         <!-- Итог за неделю -->
         <div class="grid grid-cols-[1fr_96px] gap-4 bg-ink px-4 py-3.5 text-white">
-          <div class="text-[13px] font-semibold">Итого за неделю · 10 записей</div>
-          <div class="text-right font-mono text-[15px] font-medium">27:35</div>
+          <div class="text-[13px] font-semibold">Итого за неделю · {{ weekCount }} записей</div>
+          <div class="text-right font-mono text-[15px] font-medium">{{ weekTotal }}</div>
         </div>
       </div>
     </div>

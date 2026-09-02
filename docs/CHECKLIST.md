@@ -62,10 +62,10 @@
 - [x] `types/` — общие интерфейсы: `ReportEntry` / `ReportDay` (`types/report.ts`), `Employee` (`types/employee.ts`); утилиты `utils/time.ts`, `utils/date.ts`
 - [x] `EntryModal`: `v-model` + валидация + сабмит → `addEntry` / `updateEntry`; «Изменить» / «Удалить» на строках `EntriesView`; `utils/date.ts` — `toISODate` / `fromISODate` (ветка `frontend/entry-modal`)
 - [x] `EmployeeModal` + `PasswordModal`: `v-model` + валидация + сабмит → `addEmployee` / `updateEmployee` / `setPassword`; `id` в `Employee`, инициалы из ФИО; «Изменить» / «Пароль» на строках `EmployeesView` (ветка `frontend/employee-modal`). Блокировка сотрудников убрана
+- [x] Переключение недели (стрелки ← →): `weekOffset` в сторе `reportEntries`, `days` → недельный срез (Пн–Пт), `weekLabel` / `weekTotal` / `weekCount` / `canGoNext`; общий стор → неделя синхронна на «Мои записи» и «Недельном отчёте»; демо-данные за 2 недели (ветка `frontend/week-nav`)
 
 ### В работе / дальше (фронт, на демо-данных)
 
-- [ ] Переключение недели: оффсет + фильтр `entries`, «Итого за неделю» из стора
 - [ ] Drill-down из сводного отчёта: маршрут `/employees/:id/weekly`, `employeeId` в записях
 - [ ] Кнопка «Скачать в Excel» — клиентский `.xlsx`
 - [ ] Тесты (vitest настроен, тестов нет)

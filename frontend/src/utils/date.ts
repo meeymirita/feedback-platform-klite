@@ -15,3 +15,24 @@ export function fromISODate(iso: string): string {
   const [y, m, d] = iso.split('-')
   return `${d}.${m}.${y}`
 }
+export function parseDmy(dmy: string): Date {
+  const [d, m, y] = dmy.split('.').map(Number)
+  return new Date(Number(y), Number(m) - 1, Number(d))
+}
+export function addDays(d: Date, n: number): Date {
+  const r = new Date(d)
+  r.setDate(r.getDate() + n)
+  return r
+}
+// понедельник (00:00) недели, содержащей d
+export function mondayOf(d: Date): Date {
+  const r = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const day = r.getDay()               // 0=Вс..6=Сб
+  return addDays(r, day === 0 ? -6 : 1 - day)
+}
+const dd = (n: number) => String(n).padStart(2, '0')
+export function weekRangeLabel(monday: Date): string {
+  const fri = addDays(monday, 4)
+  return `${dd(monday.getDate())}.${dd(monday.getMonth() + 1)} — ` +
+    `${dd(fri.getDate())}.${dd(fri.getMonth() + 1)}.${fri.getFullYear()}`
+}

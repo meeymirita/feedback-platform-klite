@@ -6,9 +6,10 @@ import { useReportEntriesStore } from '@/stores/reportEntries'
 import type { ReportEntry } from '@/types/report.ts'
 
 const store = useReportEntriesStore()
-const { days } = storeToRefs(store)
-// экшены берём напрямую со store — через storeToRefs они не проходят
-const { addEntry, updateEntry, deleteEntry } = store
+// state/геттеры — через storeToRefs (иначе теряют реактивность)
+const { days, weekLabel, weekTotal, isCurrentWeek, canGoNext } = storeToRefs(store)
+// экшены — напрямую со store
+const { addEntry, updateEntry, deleteEntry, prevWeek, nextWeek } = store
 
 const showEntryModal = ref(false)
 const editing = ref<ReportEntry | null>(null)
@@ -54,20 +55,27 @@ function onDelete(row: ReportEntry) {
         class="flex items-center justify-between gap-4 rounded-[9px] border border-[#e6e8ed] bg-white px-3.5 py-2.5"
       >
         <div class="flex items-center gap-2.5">
-          <button class="h-[30px] w-[30px] rounded-md border border-line hover:border-brand">
+          <button
+            @click="prevWeek"
+            class="h-[30px] w-[30px] rounded-md border border-line hover:border-brand"
+          >
             ←
           </button>
           <span class="min-w-[172px] text-center font-mono text-[13px] font-medium">
-            31.08 — 04.09.2026
+            {{ weekLabel }}
           </span>
-          <button class="h-[30px] w-[30px] rounded-md border border-line hover:border-brand">
+          <button
+            @click="nextWeek"
+            :disabled="!canGoNext"
+            class="h-[30px] w-[30px] rounded-md border border-line hover:border-brand disabled:cursor-not-allowed disabled:opacity-40"
+          >
             →
           </button>
-          <span class="text-xs text-[#9aa1ad]">текущая неделя</span>
+          <span v-if="isCurrentWeek" class="text-xs text-[#9aa1ad]">текущая неделя</span>
         </div>
         <div class="flex items-baseline gap-2">
           <span class="text-xs text-[#6b7280]">Итого за неделю</span>
-          <span class="font-mono text-[15px] font-medium">27:35</span>
+          <span class="font-mono text-[15px] font-medium">{{ weekTotal }}</span>
         </div>
       </div>
 
