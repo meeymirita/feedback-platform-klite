@@ -3,7 +3,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 // TODO (другие ветки, не сейчас):
 //  - auth: beforeEach-гард, meta.requiresAuth + meta.roles: ['admin'] на /employees и /summary,
 //    редирект гостей на /login, залогиненных с '/' в /entries
-//  - drill-down: /employees/:id/weekly (просмотр чужого отчёта из сводного, ТЗ 3.3)
 //  - инфра: fallback на index.html в Caddy для createWebHistory (иначе прямой заход по /entries → 404)
 
 // Пункты бокового меню берутся из самих маршрутов:

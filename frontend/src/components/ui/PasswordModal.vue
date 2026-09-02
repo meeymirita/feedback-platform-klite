@@ -6,8 +6,8 @@ import type { Employee } from '@/types/employee'
 const props = defineProps<{ employee: Employee }>()
 const emit = defineEmits<{ close: []; submit: [password: string] }>()
 
-const field =
-  'h-[38px] rounded-lg border border-line px-3 text-sm outline-none focus:border-brand'
+const field = 'h-[38px] rounded-lg border border-line px-3 text-sm outline-none focus:border-brand'
+const invalid = '!border-[#c8442f]' // рамка невалидного поля
 
 const form = reactive({ next: '', repeat: '' })
 const submitted = ref(false)
@@ -26,7 +26,6 @@ function save() {
   emit('submit', form.next)
   emit('close')
 }
-const invalid = '!border-[#c8442f]'
 </script>
 
 <template>

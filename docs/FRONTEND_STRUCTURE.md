@@ -17,14 +17,13 @@
 
 ```
 frontend/src/
-├── api/            — запросы к бэкенду (axios)
+├── api/            — запросы к бэкенду (пока пусто, ждёт API-слоя)
 ├── assets/         — css, картинки, шрифты
 ├── components/
 │   ├── ui/         — переиспользуемые кирпичики без бизнес-логики
-│   ├── layout/     — шапка, сайдбар, футер
-│   └── report/     — компоненты фичи «отчёт»
-├── composables/    — use-функции с переиспользуемой логикой
-├── layouts/        — каркасы страниц (обёртка со слотом)
+│   ├── layout/     — сайдбар, каркас кабинета (DefaultLayout)
+│   ├── report/     — компоненты фичи «отчёт»
+│   └── employee/   — компоненты фичи «сотрудники»
 ├── router/         — маршруты (index.ts)
 ├── stores/         — Pinia-сторы, глобальное состояние
 ├── types/          — общие TS-типы и интерфейсы
@@ -34,8 +33,10 @@ frontend/src/
 └── main.ts
 ```
 
-Новую папку под фичу (`components/auth/`, `components/employee/`) заводи по мере
-надобности. Пустые каталоги заранее не плоди.
+Каркас кабинета (сайдбар + `<RouterView>`) — это `components/layout/DefaultLayout.vue`,
+отдельной папки `layouts/` не заводим. Переиспользуемую логику держим в Pinia-сторах,
+папки `composables/` тоже нет. Новую папку под фичу (`components/auth/` и т.п.) заводи
+по мере надобности — пустые каталоги заранее не плоди.
 
 ---
 
@@ -50,10 +51,9 @@ frontend/src/
 | Шапка, меню, боковая панель | `components/layout/` | `components/layout/AppHeader.vue` |
 | Целый экран, на который ведёт маршрут в `router/index.ts` | `views/` | `views/LoginView.vue`, `views/ReportView.vue` |
 | Запрос к API (get/post) | `api/` | `api/report.ts` → `getEntries()`; `api/client.ts` — инстанс axios с интерсепторами |
-| Глобальное состояние (текущий юзер, список записей) | `stores/` | `stores/auth.ts`, `stores/report.ts` |
-| Переиспользуемая логика (поведение, не состояние) | `composables/` | `composables/useAuth.ts` |
-| Форматирование даты, минуты→часы — чистая функция без Vue | `utils/` | `utils/formatDate.ts` |
-| Общий каркас страниц (обёртка со слотом) | `layouts/` | `layouts/DefaultLayout.vue` |
+| Глобальное состояние + переиспользуемая логика (текущий юзер, список записей, уведомления) | `stores/` | `stores/reportEntries.ts`, `stores/notifications.ts` |
+| Форматирование даты, минуты→часы, склонения — чистая функция без Vue | `utils/` | `utils/date.ts`, `utils/time.ts`, `utils/plural.ts` |
+| Общий каркас страниц (сайдбар + `<RouterView>`) | `components/layout/` | `components/layout/DefaultLayout.vue` |
 
 ---
 
@@ -64,8 +64,9 @@ frontend/src/
 - **`components/ui/` или `components/<фича>/`** — если компонент можно вырвать и
   вставить в любой другой проект (кнопка, инпут), это `ui/`. Если он знает про
   «отчёт», «сотрудника», поля из ТЗ — папка фичи.
-- **`stores/` или `composables/`** — хранит данные, нужные нескольким страницам,
-  → `stores/`. Просто набор функций-помощников → `composables/`.
+- **`stores/` или `utils/`** — общее состояние или логика с состоянием (нужно
+  нескольким страницам, реактивно) → `stores/`. Чистая функция без Vue и без
+  состояния → `utils/`.
 - **`types/` или `utils/`** — `type` / `interface` → `types/`. Функция, которая
   что-то делает → `utils/`.
 
@@ -77,8 +78,8 @@ frontend/src/
   `BaseButton.vue`. `eslint-plugin-vue` ругается на однословные имена.
 - Префикс `Base` / `App` / `The` для инфраструктурных: `BaseInput`, `TheHeader`.
 - В `<template>` тоже PascalCase: `<ReportTable :entries="entries" />`.
-- Файлы в `types/`, `utils/`, `api/`, `stores/`, `composables/` — camelCase:
-  `report.ts`, `formatDate.ts`, `useAuth.ts`.
+- Файлы в `types/`, `utils/`, `api/`, `stores/` — camelCase:
+  `report.ts`, `date.ts`, `reportEntries.ts`.
 
 ---
 
@@ -89,11 +90,12 @@ frontend/src/
 ```ts
 export interface ReportEntry {
   id: string
+  employeeId: string
+  date: string // 'ДД.ММ.ГГГГ'
   domain: string
-  taskLink: string
-  description: string
-  timeMinutes: number
-  entryDate: string
+  link: string
+  desc: string
+  time: string // 'ч:мм'
 }
 ```
 
@@ -110,8 +112,8 @@ defineProps<{ entries: ReportEntry[] }>()
   <table class="report-table">
     <tr v-for="e in entries" :key="e.id">
       <td>{{ e.domain }}</td>
-      <td>{{ e.description }}</td>
-      <td>{{ e.timeMinutes }}</td>
+      <td>{{ e.desc }}</td>
+      <td>{{ e.time }}</td>
     </tr>
   </table>
 </template>

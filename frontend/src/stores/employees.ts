@@ -1,38 +1,12 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { Employee } from '@/types/employee.ts'
+import type { Employee } from '@/types/employee'
+
+type NewEmployee = Pick<Employee, 'name' | 'email' | 'role'>
 
 export const useEmployeesStore = defineStore('employees', () => {
   // Демо-данные для вёрстки. ref() обязателен: без него Pinia не считает это
   // состоянием, и storeToRefs() во view просто не найдёт employees.
-  type NewEmployee = Pick<Employee, 'name' | 'email' | 'role'>
-  function addEmployee(data: NewEmployee) {
-    employees.value.push({
-      id: crypto.randomUUID(),
-      initials: initialsFrom(data.name),
-      ...data,
-      last: '—',
-    })
-  }
-  function updateEmployee(id: string, patch: Partial<NewEmployee>) {
-    const e = employees.value.find((x) => x.id === id)
-    if (!e) return
-    Object.assign(e, patch)
-    if (patch.name) e.initials = initialsFrom(patch.name)
-  }
-  function setPassword(id: string, password: string) {
-    // демо без бэка — пароли нигде не хранятся; заглушка под будущий API
-    console.info('setPassword (демо):', id, password.length + ' символов')
-  }
-  function initialsFrom(name: string): string {
-    return name
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((w) => w[0]?.toUpperCase() ?? '')
-      .join('')
-  }
-
   const employees = ref<Employee[]>([
     {
       id: '1',
@@ -75,6 +49,35 @@ export const useEmployeesStore = defineStore('employees', () => {
       last: '—',
     },
   ])
+
+  // инициалы всегда выводим из ФИО, руками не вводим
+  function initialsFrom(name: string): string {
+    return name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? '')
+      .join('')
+  }
+
+  function addEmployee(data: NewEmployee) {
+    employees.value.push({
+      id: crypto.randomUUID(),
+      initials: initialsFrom(data.name),
+      ...data,
+      last: '—',
+    })
+  }
+  function updateEmployee(id: string, patch: Partial<NewEmployee>) {
+    const e = employees.value.find((x) => x.id === id)
+    if (!e) return
+    Object.assign(e, patch)
+    if (patch.name) e.initials = initialsFrom(patch.name)
+  }
+  // демо без бэка — пароль никуда не сохраняется; заглушка под будущий API
+  function setPassword(id: string, password: string) {
+    console.info('setPassword (демо):', id, password.length + ' символов')
+  }
 
   return { employees, addEmployee, updateEmployee, setPassword }
 })

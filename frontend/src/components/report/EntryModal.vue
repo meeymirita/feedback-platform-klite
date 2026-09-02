@@ -8,7 +8,8 @@ const props = defineProps<{ entry?: ReportEntry }>()
 // employeeId проставляет родитель (EntriesView) — модалка про сотрудника не знает
 const emit = defineEmits<{ close: []; submit: [data: Omit<ReportEntry, 'id' | 'employeeId'>] }>()
 
-const invalid = '!border-[#c8442f]'
+const field = 'h-[38px] rounded-lg border border-line px-3 text-sm outline-none focus:border-brand'
+const invalid = '!border-[#c8442f]' // рамка невалидного поля
 
 const isEdit = !!props.entry
 
@@ -52,8 +53,6 @@ function save() {
   })
   emit('close')
 }
-
-const field = 'h-[38px] rounded-lg border border-line px-3 text-sm outline-none focus:border-brand'
 </script>
 
 <template>
@@ -137,9 +136,9 @@ const field = 'h-[38px] rounded-lg border border-line px-3 text-sm outline-none 
             </button>
             <div class="ml-2 flex gap-1.5">
               <button
-                @click="form.time = t"
                 v-for="t in ['0:30', '1:00', '2:00', '4:00']"
                 :key="t"
+                @click="form.time = t"
                 class="h-[30px] rounded-md border border-line px-2.5 font-mono text-xs text-[#4b5563] hover:border-brand hover:text-brand"
               >
                 {{ t }}

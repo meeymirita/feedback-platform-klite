@@ -11,7 +11,7 @@ const fieldClass =
 
 function onSubmit() {
   // TODO: POST /auth/login — см. docs/PLAN.md, фаза 2 (сессии в Redis).
-  console.log('login', { email: email.value, password: password.value })
+  console.log('login', email.value)
 }
 
 function loginAs(role: 'employee' | 'admin') {

@@ -68,7 +68,7 @@ const { prevWeek, nextWeek } = reportEntries
           v-for="row in rows"
           :key="row.id"
           :to="{ name: 'employee-weekly', params: { id: row.id } }"
-          class="grid grid-cols-[1fr_120px_150px_170px] items-center gap-3.5 border-t border-[#f1f2f5] px-4 py-3 text-inherit no-underline hover:bg-[#f7f8fb]"
+          class="grid grid-cols-[1fr_120px_150px_170px] items-center gap-3.5 border-t border-[#f1f2f5] px-4 py-3 hover:bg-[#f7f8fb]"
         >
           <div class="flex min-w-0 items-center gap-2.5">
             <div

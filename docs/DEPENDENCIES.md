@@ -146,6 +146,7 @@
 | `vue` | `^3.5.40` | Фреймворк Vue 3 (Composition API, Single-File Components). |
 | `vue-router` | `^5.2.0` | Клиентский роутинг SPA. Используется `createWebHistory` → нужен SPA-fallback в Caddy. |
 | `pinia` | `^4.0.2` | Управление состоянием (стор). Указан в стеке ТЗ (п. 6). |
+| `vue-toastification` | `^2.0.0-rc.5` | Тост-уведомления (сборка под Vue 3). Обёрнут в `stores/notifications.ts`, стиль под дизайн платформы в `src/assets/toast.css`. |
 | `tailwindcss` | `^4.3.3` | Utility-first CSS. v4: конфиг в CSS (`@import 'tailwindcss'` в `src/assets/main.css`), без `tailwind.config.js`. |
 
 ---
