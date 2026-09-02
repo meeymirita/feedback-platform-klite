@@ -3,10 +3,31 @@ import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import EntryModal from '@/components/report/EntryModal.vue'
 import { useReportEntriesStore } from '@/stores/reportEntries'
+import type { ReportEntry } from '@/types/report.ts'
 
-const { days } = storeToRefs(useReportEntriesStore())
+const store = useReportEntriesStore()
+const { days } = storeToRefs(store)
+// экшены берём напрямую со store — через storeToRefs они не проходят
+const { addEntry, updateEntry, deleteEntry } = store
 
 const showEntryModal = ref(false)
+const editing = ref<ReportEntry | null>(null)
+
+function openCreate() {
+  editing.value = null
+  showEntryModal.value = true
+}
+function openEdit(row: ReportEntry) {
+  editing.value = row
+  showEntryModal.value = true
+}
+function onSubmit(data: Omit<ReportEntry, 'id'>) {
+  if (editing.value) updateEntry(editing.value.id, data)
+  else addEntry(data)
+}
+function onDelete(row: ReportEntry) {
+  if (confirm(`Удалить запись «${row.domain}»?`)) deleteEntry(row.id)
+}
 </script>
 
 <template>
@@ -22,7 +43,7 @@ const showEntryModal = ref(false)
         </div>
         <button
           class="h-[38px] rounded-lg bg-brand px-4 text-[13.5px] font-medium text-white hover:bg-brand-hover"
-          @click="showEntryModal = true"
+          @click="openCreate"
         >
           ＋ Добавить запись
         </button>
@@ -71,8 +92,8 @@ const showEntryModal = ref(false)
 
           <!-- Строки -->
           <div
-            v-for="(row, i) in day.rows"
-            :key="i"
+            v-for="row in day.rows"
+            :key="row.id"
             class="grid grid-cols-[170px_1fr_78px_130px] items-start gap-4 border-t border-[#f1f2f5] px-4 py-3 first:border-t-0 hover:bg-[#fafbfc]"
           >
             <div class="min-w-0">
@@ -86,13 +107,25 @@ const showEntryModal = ref(false)
             </div>
             <div class="text-right font-mono text-[13.5px]">{{ row.time }}</div>
             <div class="flex justify-end gap-3">
-              <button class="text-[12.5px] text-[#6b7280] hover:text-brand">Изменить</button>
-              <button class="text-[12.5px] text-[#9aa1ad] hover:text-[#c8442f]">Удалить</button>
+              <button @click="openEdit(row)" class="text-[12.5px] text-[#6b7280] hover:text-brand">
+                Изменить
+              </button>
+              <button
+                @click="onDelete(row)"
+                class="text-[12.5px] text-[#9aa1ad] hover:text-[#c8442f]"
+              >
+                Удалить
+              </button>
             </div>
           </div>
         </div>
       </div>
     </div>
   </main>
-  <EntryModal v-if="showEntryModal" @close="showEntryModal = false" />
+  <EntryModal
+    v-if="showEntryModal"
+    :entry="editing ?? undefined"
+    @submit="onSubmit"
+    @close="showEntryModal = false"
+  />
 </template>
