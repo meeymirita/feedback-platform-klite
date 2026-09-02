@@ -8,7 +8,7 @@ import {
 import { UserRole } from '@/generated/prisma/enums';
 
 /**
- * DTO для регистрации пользователя.
+ * DTO создания аккаунта сотрудника (ADMIN/MIRA через POST /users/create-user).
  */
 export class CreateUserDto {
   /**

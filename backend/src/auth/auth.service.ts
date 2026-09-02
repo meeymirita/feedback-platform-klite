@@ -1,11 +1,9 @@
 import {
-  ConflictException,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { RegisterDto } from './dto/register.dto';
 import { UserService } from '@/user/user.service';
 import { User } from '@/generated/prisma/client';
 import { LoginDto } from '@/auth/dto/login.dto';
@@ -19,22 +17,6 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly configService: ConfigService
   ) {}
-  public async register(req: Request, dto: RegisterDto) {
-    const isExists = await this.userService.findByEmail(dto.email);
-    if (isExists) {
-      throw new ConflictException(
-        'Регистрация не удалась. Пользователь с таким email уже существует',
-      );
-    }
-
-    const newUser = await this.userService.create(
-      dto.email,
-      dto.password,
-      dto.name,
-    );
-
-    return this.saveSession(req, newUser);
-  }
   public async login(req: Request, dto: LoginDto) {
     const user = await this.userService.findByEmail(dto.email);
     if (!user || !(await verify(user.password, dto.password))) {
