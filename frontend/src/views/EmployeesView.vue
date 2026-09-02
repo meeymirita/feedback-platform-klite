@@ -3,10 +3,12 @@ import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import EmployeeModal from '@/components/employee/EmployeeModal.vue'
 import { useEmployeesStore } from '@/stores/employees'
+import { useNotificationsStore } from '@/stores/notifications'
 import PasswordModal from '@/components/ui/PasswordModal.vue'
 import type { Employee } from '@/types/employee'
 
 const store = useEmployeesStore()
+const notify = useNotificationsStore()
 const { employees } = storeToRefs(store)
 const { addEmployee, updateEmployee, setPassword } = store
 
@@ -23,11 +25,18 @@ function openEdit(emp: Employee) {
   showEmployeeModal.value = true
 }
 function onSubmit(data: Pick<Employee, 'name' | 'email' | 'role'>) {
-  if (editing.value) updateEmployee(editing.value.id, data)
-  else addEmployee(data)
+  if (editing.value) {
+    updateEmployee(editing.value.id, data)
+    notify.success('Данные сотрудника обновлены')
+  } else {
+    addEmployee(data)
+    notify.success('Сотрудник добавлен')
+  }
 }
 function onPassword(password: string) {
-  if (pwdFor.value) setPassword(pwdFor.value.id, password)
+  if (!pwdFor.value) return
+  setPassword(pwdFor.value.id, password)
+  notify.success(`Пароль обновлён — ${pwdFor.value.name}`)
 }
 </script>
 
