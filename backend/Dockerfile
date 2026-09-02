@@ -35,16 +35,27 @@ EXPOSE 3000
 CMD ["dumb-init", "npm", "run", "start:dev"]
 
 # ─────────────────────────────────────────────────────────────
-# build — компиляция TypeScript → dist/, затем удаление dev-зависимостей
+# build — генерация Prisma Client → компиляция TS → dist/ → prune dev-deps
 # ─────────────────────────────────────────────────────────────
 FROM deps AS build
 ENV NODE_ENV=production
 COPY . .
-# Когда PrismaClient будет подключён в коде — добавить перед `npm run build`:
-#   RUN npx prisma generate
-# и в стадию production: COPY --from=build /app/generated ./generated
-RUN npm run build \
+# prisma-client генератор пишет TS в src/generated/prisma (в git/образ не
+# коммитится), дальше nest build компилирует его в dist/generated/prisma.
+RUN npx prisma generate \
+ && npm run build \
  && npm prune --omit=dev
+
+# ─────────────────────────────────────────────────────────────
+# migrate — одноразовый контейнер: db push + сид MIRA.
+# Полные зависимости (prisma CLI, tsx) — их нет в production-образе.
+# Запуск на деплое:  docker compose run --rm migrate
+# ─────────────────────────────────────────────────────────────
+FROM deps AS migrate
+ENV NODE_ENV=production
+COPY . .
+RUN npx prisma generate
+CMD ["dumb-init", "sh", "-c", "npx prisma db push && npm run seed"]
 
 # ─────────────────────────────────────────────────────────────
 # production — минимальный рантайм: только node_modules (prod) + dist
