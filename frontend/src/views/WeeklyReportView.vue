@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { computed, watchEffect, onBeforeUnmount, onMounted } from 'vue'
+import { computed, ref, watchEffect, onBeforeUnmount, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
 import { useReportEntriesStore } from '@/stores/reportEntries'
-import { useEmployeesStore } from '@/stores/employees'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
+import { listUsers } from '@/api/users'
 import { plural } from '@/utils/plural'
 
 const route = useRoute()
 const store = useReportEntriesStore()
 const auth = useAuthStore()
 const notify = useNotificationsStore()
-const { days, weekLabel, weekTotal, weekCount, canGoNext, viewEmployeeId } = storeToRefs(store)
+const { days, weekLabel, weekTotal, weekCount, canGoNext } = storeToRefs(store)
 const { prevWeek, nextWeek } = store
 
 // drill-down: /employees/:id/weekly показывает чужой отчёт; обычный /weekly — мой
@@ -21,12 +21,19 @@ watchEffect(() => store.setViewEmployee(drillId.value))
 onBeforeUnmount(() => store.setViewEmployee()) // вернуть просмотр на «меня»
 onMounted(() => store.load().catch(() => notify.error('Не удалось загрузить отчёт')))
 
-// TODO (этап «Сводный отчёт»): drill-down чужого отчёта. Пока имя — только моё.
-const employees = useEmployeesStore()
-const employeeName = computed(() => {
-  if (!drillId.value) return auth.user?.displayName ?? ''
-  return employees.employees.find((e) => e.id === viewEmployeeId.value)?.name ?? '—'
+// имя в шапке: своё — из authStore; чужое (drill-down) — из списка сотрудников
+const drillName = ref('')
+watchEffect(async () => {
+  if (!drillId.value) {
+    drillName.value = ''
+    return
+  }
+  const users = await listUsers()
+  drillName.value = users.find((u) => u.id === drillId.value)?.displayName ?? '—'
 })
+const employeeName = computed(() =>
+  drillId.value ? drillName.value : (auth.user?.displayName ?? ''),
+)
 </script>
 
 <template>

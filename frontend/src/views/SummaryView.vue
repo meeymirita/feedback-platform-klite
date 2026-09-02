@@ -1,13 +1,19 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSummaryStore } from '@/stores/summary'
 import { useReportEntriesStore } from '@/stores/reportEntries'
+import { useNotificationsStore } from '@/stores/notifications'
 
-const { summary: rows, companyCount, companyTotal } = storeToRefs(useSummaryStore())
+const summaryStore = useSummaryStore()
+const notify = useNotificationsStore()
+const { summary: rows, companyCount, companyTotal } = storeToRefs(summaryStore)
 
 const reportEntries = useReportEntriesStore()
 const { weekLabel, canGoNext } = storeToRefs(reportEntries)
 const { prevWeek, nextWeek } = reportEntries
+
+onMounted(() => summaryStore.load().catch(() => notify.error('Не удалось загрузить сводку')))
 </script>
 
 <template>

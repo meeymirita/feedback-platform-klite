@@ -1,6 +1,6 @@
 export interface ReportEntry {
   id: string
-  employeeId: string // чья запись — id из stores/employees
+  employeeId: string // id автора (userId с бэка)
   date: string // 'ДД.ММ.ГГГГ' — пока строка, как в демо
   domain: string
   link: string // 'bitrix24 · #123123123' — метка, пока не URL
