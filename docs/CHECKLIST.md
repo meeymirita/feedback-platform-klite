@@ -64,15 +64,15 @@
 - [x] `EmployeeModal` + `PasswordModal`: `v-model` + валидация + сабмит → `addEmployee` / `updateEmployee` / `setPassword`; `id` в `Employee`, инициалы из ФИО; «Изменить» / «Пароль» на строках `EmployeesView` (ветка `frontend/employee-modal`). Блокировка сотрудников убрана
 - [x] Переключение недели (стрелки ← →): `weekOffset` в сторе `reportEntries`, `days` → недельный срез (Пн–Пт), `weekLabel` / `weekTotal` / `weekCount` / `canGoNext`; общий стор → неделя синхронна на «Мои записи» и «Недельном отчёте»; демо-данные за 2 недели (ветка `frontend/week-nav`)
 - [x] Drill-down из сводного отчёта: `employeeId` в `ReportEntry`, маршрут `/employees/:id/weekly`, клик по строке сводного → недельный отчёт сотрудника (`viewEmployeeId` в сторе, «← Сводный отчёт»); `summary` теперь computed из `reportEntries` + `employees` (ветка `frontend/summary-drilldown`)
+- [x] Тост-уведомления (`vue-toastification`): стор `notifications` (`success` / `error` / `info` / `warning`), под дизайн платформы (карточка кабинета, брендовый красный), тосты на CRUD в `EntriesView` / `EmployeesView` (ветка `frontend/vue-toast`)
 
-### В работе / дальше (фронт, на демо-данных)
+### Фронт на демо-данных — закончено
 
-- [ ] Кнопка «Скачать в Excel» — клиентский `.xlsx`
-- [ ] Тесты (vitest настроен, тестов нет)
-
-### В самом конце
+Всё, что осталось, требует бэкенда:
 
 - [ ] Регистрация / авторизация: auth-стор, роут-гард (`meta.requiresAuth` / `meta.roles`), форма входа, «войти как …»
 - [ ] API-слой (`api/` пустой), замена демо-данных на запросы к бэку
+- [ ] Экспорт `.xlsx` («Скачать в Excel» / «Скачать по всем») — эндпоинты `reports/weekly` + `reports/summary` на бэке, фронт только дёргает ссылку
 
 > Адаптив под телефон ([`TZ.md` §7](TZ.md)) — не делаем: приложение только под ПК.
+> Юнит-тесты (vitest) — решили не писать на этом этапе.
