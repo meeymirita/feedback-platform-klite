@@ -133,9 +133,7 @@ async function onDelete(row: ReportEntry) {
           >
             <div class="min-w-0">
               <div class="truncate text-[13.5px] font-medium">{{ row.domain }}</div>
-              <a href="#" class="font-mono text-[11px] text-brand hover:underline">
-                {{ row.link }}
-              </a>
+              <div class="truncate font-mono text-[11px] text-[#9aa1ad]">{{ row.link }}</div>
             </div>
             <button
               class="line-clamp-2 cursor-pointer text-left text-[13px] leading-relaxed text-[#3d434c] text-pretty hover:text-brand"
