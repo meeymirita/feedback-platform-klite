@@ -1,6 +1,5 @@
 <script setup lang="ts">
-// Модалка «Новая запись». Только вёрстка формы.
-// Поля пока без v-model — добавишь v-model и отправку на бэкенд сам.
+// Модалка записи. Сейчас — только вёрстка формы (см. спеку ветки внизу файла).
 defineEmits<{ close: [] }>()
 
 const field =
@@ -103,3 +102,81 @@ const field =
     </div>
   </div>
 </template>
+
+<!-- ─────────────────────────────────────────────────────────────────────────────
+   ЗАДАЧА ВЕТКИ frontend/entry-modal  (заметка временная, удалить по готовности)
+
+   Цель: оживить EntryModal — v-model, валидация, сабмит → CRUD-экшены стора
+   reportEntries. Плюс кнопки «Изменить» / «Удалить» на строках в EntriesView.
+   Модалка не ходит в стор сама — отдаёт наружу готовый payload, решает родитель.
+
+   ── 1. src/utils/date.ts — добавить два хелпера ─────────────────────────────
+   // '31.08.2026' -> '2026-08-31'  (для <input type="date">)
+   export function toISODate(dmy: string): string {
+     const [d, m, y] = dmy.split('.')
+     return `${y}-${m}-${d}`
+   }
+   // '2026-08-31' -> '31.08.2026'  (обратно, для стора)
+   export function fromISODate(iso: string): string {
+     const [y, m, d] = iso.split('-')
+     return `${d}.${m}.${y}`
+   }
+
+   ── 2. src/components/report/EntryModal.vue ────────────────────────────────
+   defineProps<{ entry?: ReportEntry }>()        // есть -> режим правки, нет -> создание
+   defineEmits<{ close: []; submit: [data: Omit<ReportEntry, 'id'>] }>()
+
+   • form = reactive({ date, domain, link, desc, time }) — тип полей string.
+     Инициализация: из props.entry (date -> toISODate), иначе пусто + time '1:00',
+     date — сегодня (new Date().toISOString().slice(0,10)).
+   • Шапка: заголовок/подзаголовок по режиму ('Новая запись' / 'Изменить запись').
+   • Время:
+       − / +  ->  form.time = fromMinutes(Math.max(0, toMinutes(form.time) ± 30))
+       быстрые кнопки ['0:30','1:00','2:00','4:00'] -> form.time = t
+       поле <input v-model="form.time"> вместо value="1:00"
+   • Валидация (мин.), считаем на computed `errors`:
+       date  — непустая
+       domain — непустая (trim)
+       desc  — непустая (trim)
+       time  — /^\d{1,2}:[0-5]\d$/ и toMinutes > 0
+     link — не обязателен, пишем как есть (это метка, не URL — по типу).
+   • «Сохранить»: :disabled при наличии ошибок; по клику
+       emit('submit', { ...form, date: fromISODate(form.date) }); emit('close')
+   • Невалидные поля — рамка red-ish (добавить класс по условию, границу менять
+     на border-[#c8442f]); показывать текст ошибки не обязательно.
+
+   ── 3. src/views/EntriesView.vue ──────────────────────────────────────────
+   const store = useReportEntriesStore()
+   const { days } = storeToRefs(store)
+   const { addEntry, updateEntry, deleteEntry } = store   // экшены — прямо со store
+
+   const editing = ref<ReportEntry | null>(null)
+   function openCreate() { editing.value = null;  showEntryModal.value = true }
+   function openEdit(row: ReportEntry) { editing.value = row; showEntryModal.value = true }
+   function onSubmit(data: Omit<ReportEntry, 'id'>) {
+     if (editing.value) updateEntry(editing.value.id, data)
+     else addEntry(data)
+   }
+
+   • Кнопка «＋ Добавить запись» -> openCreate.
+   • «Изменить» -> openEdit(row);  «Удалить» -> deleteEntry(row.id) (можно confirm()).
+   • v-for по day.rows: :key="i" -> :key="row.id".
+   • <EntryModal v-if="showEntryModal" :entry="editing ?? undefined"
+        @submit="onSubmit" @close="showEntryModal = false" />
+
+   ── НЕ ТРОГАТЬ в этой ветке ─────────────────────────────────────────────────
+   • EmployeeModal / PasswordModal, «войти как …» — следующие ветки.
+   • «Итого за неделю» (27:35 хардкод в EntriesView) и стрелки недели — с недельным
+     отчётом отдельно; сумма ДНЯ (day.total) пересчитывается сама из стора.
+   • Excel-экспорт, реальный URL для link, API-слой.
+
+   ── ПРОВЕРКА ───────────────────────────────────────────────────────────────
+   npm run type-check && npm run lint && npm run build
+   npm run dev — на «Мои записи»: добавить / изменить / удалить запись; сумма дня
+   и число записей в шапке дня пересчитываются; правки видны и в «Недельном отчёте».
+
+   ── ПОСЛЕ ГОТОВНОСТИ ───────────────────────────────────────────────────────
+   • Отметить пункт «Модалки … EntryModal» в docs/CHECKLIST.md.
+   • Удалить эту заметку.
+───────────────────────────────────────────────────────────────────────────── -->
+
