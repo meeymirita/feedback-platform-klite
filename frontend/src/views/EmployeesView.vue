@@ -70,9 +70,11 @@ async function onSubmit(data: { name: string; email: string; role: RoleLabel; pa
 
 async function onPassword(password: string) {
   if (!pwdFor.value) return
+  // модалка закрывается синхронно после submit → pwdFor обнулится, запоминаем заранее
+  const { id, displayName } = pwdFor.value
   try {
-    await resetPassword(pwdFor.value.id, password)
-    notify.success(`Пароль обновлён — ${pwdFor.value.displayName}`)
+    await resetPassword(id, password)
+    notify.success(`Пароль обновлён — ${displayName}`)
   } catch (e) {
     notify.error(e instanceof Error ? e.message : 'Не удалось сменить пароль')
   }

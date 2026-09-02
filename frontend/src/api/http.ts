@@ -31,8 +31,14 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     body: body === undefined ? undefined : JSON.stringify(body),
   })
 
-  const text = await res.text() // logout отдаёт пустое тело
-  const data: unknown = text ? JSON.parse(text) : undefined
+  // logout отдаёт пустое тело; прокси при ошибке может вернуть не-JSON (HTML)
+  const text = await res.text()
+  let data: unknown = undefined
+  try {
+    if (text) data = JSON.parse(text)
+  } catch {
+    data = undefined
+  }
 
   if (!res.ok) {
     if (res.status === 401) onUnauthorized?.()
