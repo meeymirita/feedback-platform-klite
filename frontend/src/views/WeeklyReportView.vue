@@ -1,18 +1,20 @@
 <script setup lang="ts">
-import { computed, watchEffect, onBeforeUnmount, onMounted } from 'vue'
+import { computed, ref, watchEffect, onBeforeUnmount, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
 import { useReportEntriesStore } from '@/stores/reportEntries'
-import { useEmployeesStore } from '@/stores/employees'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
+import { listUsers } from '@/api/users'
 import { plural } from '@/utils/plural'
+import EntryViewModal from '@/components/report/EntryViewModal.vue'
+import type { ReportEntry } from '@/types/report'
 
 const route = useRoute()
 const store = useReportEntriesStore()
 const auth = useAuthStore()
 const notify = useNotificationsStore()
-const { days, weekLabel, weekTotal, weekCount, canGoNext, viewEmployeeId } = storeToRefs(store)
+const { days, weekLabel, weekTotal, weekCount, canGoNext } = storeToRefs(store)
 const { prevWeek, nextWeek } = store
 
 // drill-down: /employees/:id/weekly показывает чужой отчёт; обычный /weekly — мой
@@ -21,12 +23,22 @@ watchEffect(() => store.setViewEmployee(drillId.value))
 onBeforeUnmount(() => store.setViewEmployee()) // вернуть просмотр на «меня»
 onMounted(() => store.load().catch(() => notify.error('Не удалось загрузить отчёт')))
 
-// TODO (этап «Сводный отчёт»): drill-down чужого отчёта. Пока имя — только моё.
-const employees = useEmployeesStore()
-const employeeName = computed(() => {
-  if (!drillId.value) return auth.user?.displayName ?? ''
-  return employees.employees.find((e) => e.id === viewEmployeeId.value)?.name ?? '—'
+// имя в шапке: своё — из authStore; чужое (drill-down) — из списка сотрудников
+const drillName = ref('')
+watchEffect(async () => {
+  if (!drillId.value) {
+    drillName.value = ''
+    return
+  }
+  const users = await listUsers()
+  drillName.value = users.find((u) => u.id === drillId.value)?.displayName ?? '—'
 })
+const employeeName = computed(() =>
+  drillId.value ? drillName.value : (auth.user?.displayName ?? ''),
+)
+
+// клик по строке — просмотр записи целиком
+const viewing = ref<ReportEntry | null>(null)
 </script>
 
 <template>
@@ -86,7 +98,7 @@ const employeeName = computed(() => {
           class="grid grid-cols-[150px_1fr_320px_96px] gap-4 border-b border-[#e6e8ed] bg-[#fafbfc] px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-[#6b7280]"
         >
           <div>День</div>
-          <div>Задача (домен)</div>
+          <div>Задача · что сделал</div>
           <div>Ссылка</div>
           <div class="text-right">Время</div>
         </div>
@@ -96,15 +108,21 @@ const employeeName = computed(() => {
           <div
             v-for="(row, i) in day.rows"
             :key="row.id"
-            class="grid grid-cols-[150px_1fr_320px_96px] gap-4 border-t border-[#f4f5f7] px-4 py-2.5 first:border-t-0"
+            class="grid cursor-pointer grid-cols-[150px_1fr_320px_96px] gap-4 border-t border-[#f4f5f7] px-4 py-2.5 first:border-t-0 hover:bg-[#fafbfc]"
+            @click="viewing = row"
           >
             <div class="text-[13.5px]" :class="i === 0 ? 'font-semibold' : 'text-[#9aa1ad]'">
               {{ i === 0 ? day.name : '' }}
             </div>
-            <div class="truncate text-[13.5px]">{{ row.domain }}</div>
-            <a href="#" class="truncate font-mono text-[11.5px] text-brand hover:underline">
+            <div class="min-w-0 text-[13.5px]">
+              <div class="font-medium">{{ row.domain }}</div>
+              <div class="line-clamp-2 text-[12.5px] leading-relaxed text-[#6b7280] text-pretty">
+                {{ row.desc }}
+              </div>
+            </div>
+            <span class="truncate font-mono text-[11.5px] text-[#9aa1ad]">
               {{ row.link }}
-            </a>
+            </span>
             <div class="text-right font-mono text-[13.5px]">{{ row.time }}</div>
           </div>
 
@@ -128,4 +146,6 @@ const employeeName = computed(() => {
       </div>
     </div>
   </main>
+
+  <EntryViewModal v-if="viewing" :entry="viewing" @close="viewing = null" />
 </template>

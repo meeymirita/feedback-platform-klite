@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import type { ReportEntry, ReportDay } from '@/types/report'
 import { useAuthStore } from '@/stores/auth'
 import * as entriesApi from '@/api/reportEntries'
+import * as reportsApi from '@/api/reports'
 import { toMinutes, fromMinutes } from '@/utils/time'
 import {
   weekdayName,
@@ -49,7 +50,14 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
   const canGoNext = computed(() => weekOffset.value < 0) // вперёд текущей не пускаем
   const weekLabel = computed(() => weekRangeLabel(weekStart.value))
 
-  // Чей отчёт смотрим. Пока всегда мой; drill-down чужого — этап «Сводный отчёт».
+  // Период выбранной недели в ISO (Пн..Вс включительно) — для запросов.
+  const weekRangeISO = computed(() => ({
+    from: isoLocal(weekStart.value),
+    to: isoLocal(addDays(weekStart.value, 6)),
+  }))
+
+  // Чей отчёт смотрим: пусто/свой id — мои записи; чужой id — drill-down
+  // из сводного (только ADMIN/MIRA).
   const viewEmployeeId = ref('')
   function setViewEmployee(id?: string) {
     viewEmployeeId.value = id || auth.user?.id || ''
@@ -57,14 +65,17 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
 
   // Загрузка записей выбранной недели с бэкенда.
   async function load() {
-    const from = isoLocal(weekStart.value)
-    const to = isoLocal(addDays(weekStart.value, 6)) // Пн..Вс включительно
-    const list = await entriesApi.listEntries(from, to)
+    const { from, to } = weekRangeISO.value
+    const uid = viewEmployeeId.value
+    const mine = !uid || uid === auth.user?.id
+    const list = mine
+      ? await entriesApi.listEntries(from, to)
+      : await reportsApi.getUserEntries(uid, from, to)
     rows.value = list.map(toRow)
   }
 
-  // при смене недели — перезагрузка
-  watch(weekStart, () => {
+  // перезагрузка при смене недели или просматриваемого сотрудника
+  watch([weekStart, viewEmployeeId], () => {
     void load()
   })
 
@@ -97,10 +108,6 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
   )
   const weekCount = computed(() => rows.value.length)
 
-  // Совместимость со stores/summary (сводный отчёт). Пока это только мои записи —
-  // корректные данные для сводного появятся на этапе «Сводный отчёт».
-  const weekEntriesAll = computed(() => rows.value)
-
   async function addEntry(data: Omit<ReportEntry, 'id' | 'employeeId'>) {
     await entriesApi.createEntry({
       date: toISODate(data.date),
@@ -131,9 +138,9 @@ export const useReportEntriesStore = defineStore('reportEntries', () => {
   return {
     days,
     weekLabel,
+    weekRangeISO,
     weekTotal,
     weekCount,
-    weekEntriesAll,
     isCurrentWeek,
     canGoNext,
     viewEmployeeId,

@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import EntryModal from '@/components/report/EntryModal.vue'
+import EntryViewModal from '@/components/report/EntryViewModal.vue'
 import { useReportEntriesStore } from '@/stores/reportEntries'
 import { useNotificationsStore } from '@/stores/notifications'
 import { plural } from '@/utils/plural'
@@ -21,6 +22,7 @@ onMounted(() => {
 
 const showEntryModal = ref(false)
 const editing = ref<ReportEntry | null>(null)
+const viewing = ref<ReportEntry | null>(null)
 
 function openCreate() {
   editing.value = null
@@ -127,19 +129,23 @@ async function onDelete(row: ReportEntry) {
           <div
             v-for="row in day.rows"
             :key="row.id"
-            class="grid grid-cols-[170px_1fr_78px_130px] items-start gap-4 border-t border-[#f1f2f5] px-4 py-3 first:border-t-0 hover:bg-[#fafbfc]"
+            class="grid grid-cols-[170px_1fr_78px_172px] items-start gap-4 border-t border-[#f1f2f5] px-4 py-3 first:border-t-0 hover:bg-[#fafbfc]"
           >
             <div class="min-w-0">
               <div class="truncate text-[13.5px] font-medium">{{ row.domain }}</div>
-              <a href="#" class="font-mono text-[11px] text-brand hover:underline">
-                {{ row.link }}
-              </a>
+              <div class="truncate font-mono text-[11px] text-[#9aa1ad]">{{ row.link }}</div>
             </div>
-            <div class="text-[13px] leading-relaxed text-[#3d434c] text-pretty">
+            <button
+              class="line-clamp-2 cursor-pointer text-left text-[13px] leading-relaxed text-[#3d434c] text-pretty hover:text-brand"
+              @click="viewing = row"
+            >
               {{ row.desc }}
-            </div>
+            </button>
             <div class="text-right font-mono text-[13.5px]">{{ row.time }}</div>
             <div class="flex justify-end gap-3">
+              <button @click="viewing = row" class="text-[12.5px] text-[#6b7280] hover:text-brand">
+                Смотреть
+              </button>
               <button @click="openEdit(row)" class="text-[12.5px] text-[#6b7280] hover:text-brand">
                 Изменить
               </button>
@@ -161,4 +167,5 @@ async function onDelete(row: ReportEntry) {
     @submit="onSubmit"
     @close="showEntryModal = false"
   />
+  <EntryViewModal v-if="viewing" :entry="viewing" @close="viewing = null" />
 </template>
