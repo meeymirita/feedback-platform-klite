@@ -133,8 +133,9 @@ enum Role { EMPLOYEE ADMIN }
 
 - Глобальный `ValidationPipe` (`whitelist: true, transform: true`) — [`TZ.md` §7](TZ.md#7-нефункциональные-требования).
 - Глобальный фильтр исключений + логгер ошибок (`Logger` Nest или `pino`).
-- Префикс `app.setGlobalPrefix('api')`? **Нет** — Caddy уже срезает `/api` (см. `DOCKER.md`).
-  Роуты объявляем без `/api`.
+- Префикс: `app.setGlobalPrefix('api/v1')` (уже в `backend/src/main.ts`). Caddy
+  проксирует `/api/*` без среза префикса (`handle`, не `handle_path`), путь
+  сквозной: `/api/v1/...` у браузера = у бэка. См. `DOCKER.md` §7.
 - CORS: не нужен (один origin через Caddy), но включить для dev-порта Vite при
   прямом обращении к `:3000`.
 - `cookie-parser` для refresh-cookie.
@@ -248,7 +249,7 @@ access; `change-password` меняет пароль и старый перест
 
 ### 5.2. API-слой
 
-- `src/api/http.ts` — инстанс Axios (`baseURL: '/api'`), request-interceptor
+- `src/api/http.ts` — инстанс Axios (`baseURL: '/api/v1'`, `withCredentials: true`), request-interceptor
   добавляет `Authorization: Bearer`, response-interceptor на `401` дергает
   `/auth/refresh` и повторяет запрос (очередь на время refresh).
 - `src/api/{auth,reportEntries,reports,users}.ts` — типизированные функции на каждый эндпоинт.

@@ -144,6 +144,9 @@
 
 ## 5. API (основные эндпоинты, REST)
 
+> Все роуты обслуживаются под глобальным префиксом `/api/v1` (`app.setGlobalPrefix`
+> в `backend/src/main.ts`). Ниже пути указаны без префикса.
+
 ```
 POST   /auth/login
 POST   /auth/refresh
