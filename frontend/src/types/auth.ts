@@ -1,5 +1,4 @@
 // Роль с бэкенда (Prisma enum UserRole). НЕ путать с Employee.role
-// ('Сотрудник' | 'Админ') — то отдельная демо-модель экрана «Сотрудники».
 export type UserRole = 'USER' | 'ADMIN' | 'MIRA'
 
 // Пользователь как его отдаёт /api/v1/users/profile и /auth/{login,register}.
