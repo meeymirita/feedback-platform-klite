@@ -34,6 +34,7 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
+      whitelist: true, // выкидывает поля, которых нет в DTO
     }),
   );
 
