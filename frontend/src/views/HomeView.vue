@@ -1,22 +1,35 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
-const email = ref('a.sokolov@kontur-group.ru')
+const auth = useAuthStore()
+const router = useRouter()
+const route = useRoute()
+
+const email = ref('')
 const password = ref('')
+const loading = ref(false)
+const error = ref<string | null>(null)
 
 // Общие классы для полей ввода — чтобы не дублировать.
 const fieldClass =
   'h-10 rounded-lg border border-line bg-white px-3 text-sm outline-none ' +
   'focus:border-brand focus:ring-1 focus:ring-brand'
 
-function onSubmit() {
-  // TODO: POST /auth/login — см. docs/PLAN.md, фаза 2 (сессии в Redis).
-  console.log('login', email.value)
-}
-
-function loginAs(role: 'employee' | 'admin') {
-  // Прототип: быстрый вход без бэкенда.
-  console.log('login as', role)
+async function onSubmit() {
+  error.value = null
+  loading.value = true
+  try {
+    await auth.login({ email: email.value, password: password.value })
+    // ?redirect=... ставит роутер-гард, когда гость ломился в закрытую страницу
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null
+    await router.push(redirect ?? { name: 'entries' })
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Не удалось войти'
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -38,8 +51,7 @@ function loginAs(role: 'employee' | 'admin') {
           Ежедневная и еженедельная отчётность
         </h1>
         <p class="text-[15px] leading-relaxed text-[#9aa1ad] text-pretty">
-          Одна запись — одна задача. В конце недели записи собираются в отчёт и
-          выгружаются в Excel.
+          Одна запись — одна задача. В конце недели записи собираются в отчёт и выгружаются в Excel.
         </p>
       </div>
 
@@ -78,44 +90,28 @@ function loginAs(role: 'employee' | 'admin') {
             />
           </label>
 
+          <p
+            v-if="error"
+            class="rounded-lg border border-[#f0c9c6] bg-[#fdf2f1] px-3.5 py-2.5 text-[12.5px] text-[#8f2521]"
+          >
+            {{ error }}
+          </p>
+
           <button
             type="submit"
-            class="h-[42px] rounded-lg bg-brand text-sm font-medium text-white transition-colors hover:bg-brand-hover"
+            :disabled="loading"
+            class="h-[42px] rounded-lg bg-brand text-sm font-medium text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Войти
+            {{ loading ? 'Вход…' : 'Войти' }}
           </button>
         </form>
 
         <p
           class="rounded-lg border border-[#e8eaef] bg-[#fafbfc] px-3.5 py-3 text-[12.5px] leading-relaxed text-[#6b7280] text-pretty"
         >
-          Забыли пароль — обратитесь к администратору. Самостоятельная регистрация
-          и восстановление по email не предусмотрены.
+          Забыли пароль — обратитесь к администратору. Самостоятельная регистрация и восстановление
+          по email не предусмотрены.
         </p>
-
-        <div class="flex flex-col gap-2 border-t border-dashed border-[#e2e5ea] pt-1.5">
-          <div
-            class="font-mono text-[10.5px] uppercase tracking-[0.06em] text-[#9aa1ad]"
-          >
-            прототип — войти как
-          </div>
-          <div class="flex gap-2">
-            <button
-              type="button"
-              class="h-[34px] flex-1 rounded-[7px] border border-line bg-white text-[13px] hover:bg-black/[0.03]"
-              @click="loginAs('employee')"
-            >
-              Сотрудник
-            </button>
-            <button
-              type="button"
-              class="h-[34px] flex-1 rounded-[7px] border border-line bg-white text-[13px] hover:bg-black/[0.03]"
-              @click="loginAs('admin')"
-            >
-              Админ
-            </button>
-          </div>
-        </div>
       </div>
     </section>
   </main>
