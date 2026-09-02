@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import cookieParser from 'cookie-parser';
 import { ConfigService } from '@nestjs/config';
@@ -8,10 +9,18 @@ import session from 'express-session';
 import { ms, StringValue } from './libs/common/utils/ms.util';
 import { parseBoolean } from './libs/common/utils/parse-boolean.util';
 import { RedisStore } from 'connect-redis';
+import { IS_DEV_ENV } from './libs/common/utils/is-dev-util';
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   const config = app.get(ConfigService);
+
+  // За реверс-прокси (Caddy) в проде backend видит HTTP, а не HTTPS.
+  // Без этого secure-куки не выставляются и req.protocol врёт.
+  // В dev (прямой доступ на :3000) не нужно.
+  if (!IS_DEV_ENV) {
+    app.set('trust proxy', 1);
+  }
 
   const redis = createClient({ url: config.getOrThrow('REDIS_URI') });
   await redis.connect();
@@ -28,12 +37,17 @@ async function bootstrap() {
     session({
       secret: config.getOrThrow<string>('SESSION_SECRET'),
       name: config.getOrThrow<string>('SESSION_NAME'),
-      resave: true,
+      // connect-redis умеет touch → нет смысла переписывать сессию на каждый запрос.
+      resave: false,
       saveUninitialized: false,
       cookie: {
-        domain: config.getOrThrow<string>('SESSION_DOMAIN'),
+        // Пустой SESSION_DOMAIN → host-only кука (рекомендуется для localhost).
+        // logout чистит куку тем же выражением, иначе браузер её не удалит.
+        domain: config.get<string>('SESSION_DOMAIN') || undefined,
+        path: '/',
         maxAge: ms(config.getOrThrow<StringValue>('SESSION_MAX_AGE')),
         httpOnly: parseBoolean(config.getOrThrow<string>('SESSION_HTTP_ONLY')),
+        // Прод: SESSION_SECURE=true (только по HTTPS). Требует trust proxy выше.
         secure: parseBoolean(config.getOrThrow<string>('SESSION_SECURE')),
         sameSite: 'lax',
       },
@@ -47,7 +61,6 @@ async function bootstrap() {
   app.enableCors({
     origin: config.getOrThrow<string>('ALLOWED_ORIGIN'),
     credentials: true,
-    exposedHeaders: ['set-cookie'],
   });
   await app.listen(config.getOrThrow<number>('APPLICATION_PORT'));
 }

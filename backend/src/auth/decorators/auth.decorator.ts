@@ -1,0 +1,22 @@
+import { applyDecorators, UseGuards } from '@nestjs/common';
+import { Roles } from './roles.decorator';
+import { UserRole } from '@/generated/prisma/enums';
+import { AuthGuard } from '@/auth/guard/auth.guard';
+import { RolesGuard } from '@/auth/guard/roles.guard';
+
+/**
+ * Декоратор для авторизации пользователей с определенными ролями.
+ *
+ * Этот декоратор применяет защиту на основе ролей и аутентификации.
+ * Если указаны роли, применяется также декоратор Roles.
+ *
+ * @param roles - Массив ролей, для которых требуется доступ.
+ * @returns Декораторы, применяемые к методу или классу.
+ */
+export function Authorization(...roles: UserRole[]) {
+  if (roles.length > 0) {
+    return applyDecorators(Roles(...roles), UseGuards(AuthGuard, RolesGuard));
+  }
+
+  return applyDecorators(UseGuards(AuthGuard));
+}
