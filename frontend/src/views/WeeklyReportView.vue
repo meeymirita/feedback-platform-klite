@@ -93,7 +93,7 @@ const employeeName = computed(() =>
           class="grid grid-cols-[150px_1fr_320px_96px] gap-4 border-b border-[#e6e8ed] bg-[#fafbfc] px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-[#6b7280]"
         >
           <div>День</div>
-          <div>Задача (домен)</div>
+          <div>Задача · что сделал</div>
           <div>Ссылка</div>
           <div class="text-right">Время</div>
         </div>
@@ -108,7 +108,12 @@ const employeeName = computed(() =>
             <div class="text-[13.5px]" :class="i === 0 ? 'font-semibold' : 'text-[#9aa1ad]'">
               {{ i === 0 ? day.name : '' }}
             </div>
-            <div class="truncate text-[13.5px]">{{ row.domain }}</div>
+            <div class="min-w-0 text-[13.5px]">
+              <div class="font-medium">{{ row.domain }}</div>
+              <div class="text-[12.5px] leading-relaxed text-[#6b7280] text-pretty">
+                {{ row.desc }}
+              </div>
+            </div>
             <a href="#" class="truncate font-mono text-[11.5px] text-brand hover:underline">
               {{ row.link }}
             </a>
