@@ -18,7 +18,16 @@ function goBack() {
     <!-- Левая колонка — контент -->
     <section class="relative z-[2] flex flex-col justify-between p-8 lg:px-[52px] lg:py-11">
       <!-- Лого -->
-      <div class="flex items-center gap-2.5">
+      <div class="relative flex items-center gap-2.5">
+        <!-- Тучка над логотипом -->
+        <div class="cloud absolute left-[-3px] top-[-34px] h-6 w-12">
+          <div class="absolute left-1.5 top-2 h-[13px] w-10 rounded-lg bg-[#8d949e]"></div>
+          <div class="absolute left-2.5 top-px h-4 w-4 rounded-full bg-[#8d949e]"></div>
+          <div class="absolute left-[22px] top-[3px] h-[13px] w-[13px] rounded-full bg-[#9ba2ab]"></div>
+          <span class="drop absolute left-[15px] top-5 h-2 w-0.5 rounded-[1px] bg-[#8d949e]"></span>
+          <span class="drop drop-2 absolute left-[26px] top-5 h-2 w-0.5 rounded-[1px] bg-[#8d949e]"></span>
+          <span class="drop drop-3 absolute left-9 top-5 h-2 w-0.5 rounded-[1px] bg-brand opacity-70"></span>
+        </div>
         <img src="@/assets/images/logo.png" alt="" class="h-6 w-6 rounded-md object-cover" />
         <span class="text-sm font-semibold tracking-[0.01em]">Отчётность</span>
       </div>
@@ -126,9 +135,46 @@ function goBack() {
     opacity: 0.9;
   }
 }
+@keyframes cloudBob {
+  0%,
+  100% {
+    transform: translateX(-1px);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+}
+@keyframes drop {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scaleY(0.6);
+  }
+  20% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(26px) scaleY(1.2);
+  }
+}
 
 .flicker {
   animation: flicker 6s ease-in-out infinite;
+}
+
+.cloud {
+  animation: cloudBob 5s ease-in-out infinite;
+}
+.drop {
+  animation: drop 1.4s linear infinite;
+}
+.drop-2 {
+  animation-duration: 1.6s;
+  animation-delay: 0.5s;
+}
+.drop-3 {
+  animation-duration: 1.5s;
+  animation-delay: 0.9s;
 }
 
 .shape {
