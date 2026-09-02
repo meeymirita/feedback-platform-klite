@@ -15,10 +15,8 @@ const { days, weekLabel, weekTotal, isCurrentWeek, canGoNext } = storeToRefs(sto
 // экшены — напрямую со store
 const { addEntry, updateEntry, deleteEntry, prevWeek, nextWeek } = store
 
-onMounted(() => {
-  store.setViewEmployee() // «Мои записи» — всегда мой отчёт
-  store.load().catch(() => notify.error('Не удалось загрузить записи'))
-})
+// «Мои записи» — всегда мой отчёт; setViewEmployee запускает загрузку через вотчер
+onMounted(() => store.setViewEmployee())
 
 const showEntryModal = ref(false)
 const editing = ref<ReportEntry | null>(null)

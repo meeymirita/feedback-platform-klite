@@ -4,6 +4,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { initials } from '@/utils/initials'
 import type { UserRole } from '@/types/auth'
 
 const route = useRoute()
@@ -23,15 +24,7 @@ const roleLabel: Record<UserRole, string> = {
   MIRA: 'Владелец',
 }
 
-const initials = computed(() => {
-  const name = auth.user?.displayName ?? ''
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
-})
+const userInitials = computed(() => initials(auth.user?.displayName ?? ''))
 
 async function onLogout() {
   await auth.logout()
@@ -72,7 +65,7 @@ async function onLogout() {
         <div
           class="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-[#f8e8e6] text-xs font-semibold text-brand"
         >
-          {{ initials }}
+          {{ userInitials }}
         </div>
         <div class="min-w-0">
           <div class="truncate text-[12.5px] font-medium">{{ auth.user.displayName }}</div>

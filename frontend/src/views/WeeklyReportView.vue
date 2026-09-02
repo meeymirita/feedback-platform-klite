@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, watchEffect, onBeforeUnmount, onMounted } from 'vue'
+import { computed, ref, watchEffect, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
 import { useReportEntriesStore } from '@/stores/reportEntries'
 import { useAuthStore } from '@/stores/auth'
-import { useNotificationsStore } from '@/stores/notifications'
 import { listUsers } from '@/api/users'
 import { plural } from '@/utils/plural'
 import EntryViewModal from '@/components/report/EntryViewModal.vue'
@@ -13,15 +12,14 @@ import type { ReportEntry } from '@/types/report'
 const route = useRoute()
 const store = useReportEntriesStore()
 const auth = useAuthStore()
-const notify = useNotificationsStore()
 const { days, weekLabel, weekTotal, weekCount, canGoNext } = storeToRefs(store)
 const { prevWeek, nextWeek } = store
 
-// drill-down: /employees/:id/weekly показывает чужой отчёт; обычный /weekly — мой
+// drill-down: /employees/:id/weekly показывает чужой отчёт; обычный /weekly — мой.
+// setViewEmployee запускает загрузку записей через вотчер в сторе.
 const drillId = computed(() => (route.params.id ? String(route.params.id) : undefined))
 watchEffect(() => store.setViewEmployee(drillId.value))
 onBeforeUnmount(() => store.setViewEmployee()) // вернуть просмотр на «меня»
-onMounted(() => store.load().catch(() => notify.error('Не удалось загрузить отчёт')))
 
 // имя в шапке: своё — из authStore; чужое (drill-down) — из списка сотрудников
 const drillName = ref('')
