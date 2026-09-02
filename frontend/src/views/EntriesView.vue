@@ -3,9 +3,11 @@ import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import EntryModal from '@/components/report/EntryModal.vue'
 import { useReportEntriesStore, MY_EMPLOYEE_ID } from '@/stores/reportEntries'
+import { useNotificationsStore } from '@/stores/notifications'
 import type { ReportEntry } from '@/types/report.ts'
 
 const store = useReportEntriesStore()
+const notify = useNotificationsStore()
 // state/геттеры — через storeToRefs (иначе теряют реактивность)
 const { days, weekLabel, weekTotal, isCurrentWeek, canGoNext } = storeToRefs(store)
 // экшены — напрямую со store
@@ -26,11 +28,18 @@ function openEdit(row: ReportEntry) {
   showEntryModal.value = true
 }
 function onSubmit(data: Omit<ReportEntry, 'id' | 'employeeId'>) {
-  if (editing.value) updateEntry(editing.value.id, data)
-  else addEntry({ ...data, employeeId: MY_EMPLOYEE_ID })
+  if (editing.value) {
+    updateEntry(editing.value.id, data)
+    notify.success('Запись обновлена')
+  } else {
+    addEntry({ ...data, employeeId: MY_EMPLOYEE_ID })
+    notify.success('Запись добавлена')
+  }
 }
 function onDelete(row: ReportEntry) {
-  if (confirm(`Удалить запись «${row.domain}»?`)) deleteEntry(row.id)
+  if (!confirm(`Удалить запись «${row.domain}»?`)) return
+  deleteEntry(row.id)
+  notify.info('Запись удалена')
 }
 </script>
 
