@@ -60,10 +60,11 @@
 - [x] Ассеты: `logo.png` (256×256), `404.webp`
 - [x] CRUD-экшены в сторах: `reportEntries` — плоский `entries[]`, `days` как `computed`, `addEntry` / `updateEntry` / `deleteEntry` (ветка `frontend/entries-crud`)
 - [x] `types/` — общие интерфейсы: `ReportEntry` / `ReportDay` (`types/report.ts`), `Employee` (`types/employee.ts`); утилиты `utils/time.ts`, `utils/date.ts`
+- [x] `EntryModal`: `v-model` + валидация + сабмит → `addEntry` / `updateEntry`; «Изменить» / «Удалить» на строках `EntriesView`; `utils/date.ts` — `toISODate` / `fromISODate` (ветка `frontend/entry-modal`)
 
 ### В работе / дальше
 
-- [~] Модалки `EntryModal` / `EmployeeModal` / `PasswordModal` — только вёрстка, без `v-model`, валидации, сабмита
+- [~] Модалки `EmployeeModal` / `PasswordModal` — только вёрстка, без `v-model`, валидации, сабмита
 - [ ] Auth-стор + гард (`meta.requiresAuth` / `meta.roles`) — TODO в `router/index.ts`
 - [ ] API-слой (`api/` пустой), замена демо-данных на запросы к бэку
 - [ ] Кнопки «Скачать в Excel», стрелки переключения недели, «Изменить» / «Удалить», «войти как …» — без обработчиков
