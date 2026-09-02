@@ -1,57 +1,81 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { storeToRefs } from 'pinia'
+import { ref, onMounted } from 'vue'
 import EmployeeModal from '@/components/employee/EmployeeModal.vue'
-import { useEmployeesStore } from '@/stores/employees'
-import { useNotificationsStore } from '@/stores/notifications'
 import PasswordModal from '@/components/ui/PasswordModal.vue'
-import type { Employee } from '@/types/employee'
-import { createUser } from '@/api/users'
+import { useNotificationsStore } from '@/stores/notifications'
+import { listUsers, createUser, updateUser, resetPassword } from '@/api/users'
+import type { AuthUser, UserRole } from '@/types/auth'
 
-const store = useEmployeesStore()
 const notify = useNotificationsStore()
-const { employees } = storeToRefs(store)
-const { updateEmployee, setPassword } = store
+
+// Реальные сотрудники с бэкенда (GET /users, без MIRA).
+const rows = ref<AuthUser[]>([])
+
+async function load() {
+  try {
+    rows.value = await listUsers()
+  } catch (e) {
+    notify.error(e instanceof Error ? e.message : 'Не удалось загрузить список')
+  }
+}
+onMounted(load)
+
+// Роль: бэкенд говорит USER/ADMIN, в интерфейсе — Сотрудник/Админ.
+type RoleLabel = 'Сотрудник' | 'Админ'
+const roleRu = (r: UserRole): RoleLabel => (r === 'ADMIN' ? 'Админ' : 'Сотрудник')
+const roleEn = (label: RoleLabel): UserRole => (label === 'Админ' ? 'ADMIN' : 'USER')
+
+function initials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('')
+}
 
 const showEmployeeModal = ref(false)
-const editing = ref<Employee | null>(null)
-const pwdFor = ref<Employee | null>(null)
+const editing = ref<AuthUser | null>(null)
+const pwdFor = ref<AuthUser | null>(null)
 
 function openCreate() {
   editing.value = null
   showEmployeeModal.value = true
 }
-function openEdit(emp: Employee) {
+function openEdit(emp: AuthUser) {
   editing.value = emp
   showEmployeeModal.value = true
 }
-async function onSubmit(data: {
-  name: string
-  email: string
-  role: Employee['role']
-  password: string
-}) {
-  if (editing.value) {
-    updateEmployee(editing.value.id, { name: data.name, email: data.email, role: data.role })
-    notify.success('Данные сотрудника обновлены')
-    return
-  }
+
+async function onSubmit(data: { name: string; email: string; role: RoleLabel; password: string }) {
   try {
-    await createUser({
-      displayName: data.name,
-      email: data.email,
-      password: data.password,
-      role: data.role === 'Админ' ? 'ADMIN' : 'USER',
-    })
-    notify.success('Аккаунт создан. Передай пароль сотруднику.')
+    if (editing.value) {
+      // правка — email и пароль не трогаем
+      await updateUser(editing.value.id, { displayName: data.name, role: roleEn(data.role) })
+      notify.success('Данные сотрудника обновлены')
+    } else {
+      await createUser({
+        displayName: data.name,
+        email: data.email,
+        password: data.password,
+        role: roleEn(data.role),
+      })
+      notify.success('Аккаунт создан. Передай пароль сотруднику.')
+    }
+    await load()
   } catch (e) {
-    notify.error(e instanceof Error ? e.message : 'Не удалось создать аккаунт')
+    notify.error(e instanceof Error ? e.message : 'Не удалось сохранить')
   }
 }
-function onPassword(password: string) {
+
+async function onPassword(password: string) {
   if (!pwdFor.value) return
-  setPassword(pwdFor.value.id, password)
-  notify.success(`Пароль обновлён — ${pwdFor.value.name}`)
+  try {
+    await resetPassword(pwdFor.value.id, password)
+    notify.success(`Пароль обновлён — ${pwdFor.value.displayName}`)
+  } catch (e) {
+    notify.error(e instanceof Error ? e.message : 'Не удалось сменить пароль')
+  }
 }
 </script>
 
@@ -86,8 +110,12 @@ function onPassword(password: string) {
           <div class="text-right">Действия</div>
         </div>
 
+        <div v-if="rows.length === 0" class="px-4 py-8 text-center text-[13px] text-[#9aa1ad]">
+          Сотрудников пока нет
+        </div>
+
         <div
-          v-for="emp in employees"
+          v-for="emp in rows"
           :key="emp.id"
           class="grid grid-cols-[1fr_230px_110px_130px_150px] items-center gap-3.5 border-t border-[#f1f2f5] px-4 py-3 hover:bg-[#fafbfc]"
         >
@@ -96,21 +124,16 @@ function onPassword(password: string) {
             <div
               class="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[#f8e8e6] text-[11px] font-semibold text-brand"
             >
-              {{ emp.initials }}
+              {{ initials(emp.displayName) }}
             </div>
             <div class="truncate text-[13.5px] font-medium">
-              {{ emp.name }}
+              {{ emp.displayName }}
             </div>
           </div>
 
           <div class="truncate font-mono text-[11.5px] text-[#6b7280]">{{ emp.email }}</div>
-          <div class="text-[12.5px] text-[#3d434c]">{{ emp.role }}</div>
-          <div
-            class="font-mono text-xs"
-            :class="emp.last === '—' ? 'text-[#9aa1ad]' : 'text-[#4b5563]'"
-          >
-            {{ emp.last }}
-          </div>
+          <div class="text-[12.5px] text-[#3d434c]">{{ roleRu(emp.role) }}</div>
+          <div class="font-mono text-xs text-[#9aa1ad]">—</div>
 
           <!-- Действия -->
           <div class="flex justify-end gap-3">
@@ -128,9 +151,18 @@ function onPassword(password: string) {
 
   <EmployeeModal
     v-if="showEmployeeModal"
-    :employee="editing ?? undefined"
+    :employee="
+      editing
+        ? { name: editing.displayName, email: editing.email, role: roleRu(editing.role) }
+        : undefined
+    "
     @submit="onSubmit"
     @close="showEmployeeModal = false"
   />
-  <PasswordModal v-if="pwdFor" :employee="pwdFor" @submit="onPassword" @close="pwdFor = null" />
+  <PasswordModal
+    v-if="pwdFor"
+    :name="pwdFor.displayName"
+    @submit="onPassword"
+    @close="pwdFor = null"
+  />
 </template>

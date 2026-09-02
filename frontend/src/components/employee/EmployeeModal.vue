@@ -1,13 +1,15 @@
 <script setup lang="ts">
 // Модалка сотрудника: создание / правка.
 import { ref, reactive, computed } from 'vue'
-import type { Employee } from '@/types/employee'
 
-const props = defineProps<{ employee?: Employee }>()
+type RoleLabel = 'Сотрудник' | 'Админ'
+
+// В режиме правки прокидываем только то, что нужно форме.
+const props = defineProps<{ employee?: { name: string; email: string; role: RoleLabel } }>()
 const emit = defineEmits<{
   close: []
-  // пароль здесь отдельным полем — он не часть Employee, живёт только до отправки
-  submit: [data: { name: string; email: string; role: Employee['role']; password: string }]
+  // пароль отдаётся отдельным полем; в режиме правки он игнорируется вызывающим
+  submit: [data: { name: string; email: string; role: RoleLabel; password: string }]
 }>()
 
 const field = 'h-[38px] rounded-lg border border-line px-3 text-sm outline-none focus:border-brand'
@@ -17,7 +19,7 @@ const isEdit = !!props.employee
 const form = reactive({
   name: props.employee?.name ?? '',
   email: props.employee?.email ?? '',
-  role: props.employee?.role ?? ('Сотрудник' as Employee['role']),
+  role: props.employee?.role ?? ('Сотрудник' as RoleLabel),
 })
 
 const submitted = ref(false)

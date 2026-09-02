@@ -1,9 +1,8 @@
 <script setup lang="ts">
 // Модалка смены пароля: админ задаёт сотруднику новый пароль.
 import { ref, reactive, computed } from 'vue'
-import type { Employee } from '@/types/employee'
 
-const props = defineProps<{ employee: Employee }>()
+const props = defineProps<{ name: string }>()
 const emit = defineEmits<{ close: []; submit: [password: string] }>()
 
 const field = 'h-[38px] rounded-lg border border-line px-3 text-sm outline-none focus:border-brand'
@@ -35,7 +34,7 @@ function save() {
   >
     <div class="w-full max-w-[380px] overflow-hidden rounded-xl bg-white shadow-2xl">
       <div class="flex items-center justify-between border-b border-[#eceef2] px-5 py-4">
-        <div class="text-base font-semibold">Смена пароля — {{ props.employee.name }}</div>
+        <div class="text-base font-semibold">Смена пароля — {{ props.name }}</div>
         <button
           class="flex h-7 w-7 items-center justify-center rounded-md bg-[#f4f5f7] text-[#6b7280] hover:bg-[#eceef2]"
           @click="$emit('close')"
