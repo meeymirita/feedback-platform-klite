@@ -3,10 +3,32 @@ import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import EmployeeModal from '@/components/employee/EmployeeModal.vue'
 import { useEmployeesStore } from '@/stores/employees'
+import PasswordModal from '@/components/ui/PasswordModal.vue'
+import type { Employee } from '@/types/employee'
 
-const { employees } = storeToRefs(useEmployeesStore())
+const store = useEmployeesStore()
+const { employees } = storeToRefs(store)
+const { addEmployee, updateEmployee, setPassword } = store
 
 const showEmployeeModal = ref(false)
+const editing = ref<Employee | null>(null)
+const pwdFor = ref<Employee | null>(null)
+
+function openCreate() {
+  editing.value = null
+  showEmployeeModal.value = true
+}
+function openEdit(emp: Employee) {
+  editing.value = emp
+  showEmployeeModal.value = true
+}
+function onSubmit(data: Pick<Employee, 'name' | 'email' | 'role'>) {
+  if (editing.value) updateEmployee(editing.value.id, data)
+  else addEmployee(data)
+}
+function onPassword(password: string) {
+  if (pwdFor.value) setPassword(pwdFor.value.id, password)
+}
 </script>
 
 <template>
@@ -22,7 +44,7 @@ const showEmployeeModal = ref(false)
         </div>
         <button
           class="h-[38px] rounded-lg bg-brand px-4 text-[13.5px] font-medium text-white hover:bg-brand-hover"
-          @click="showEmployeeModal = true"
+          @click="openCreate"
         >
           ＋ Добавить сотрудника
         </button>
@@ -31,34 +53,28 @@ const showEmployeeModal = ref(false)
       <!-- Таблица -->
       <div class="overflow-hidden rounded-[9px] border border-[#e6e8ed] bg-white">
         <div
-          class="grid grid-cols-[1fr_230px_110px_130px_120px_150px] gap-3.5 border-b border-[#e6e8ed] bg-[#fafbfc] px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-[#6b7280]"
+          class="grid grid-cols-[1fr_230px_110px_130px_150px] gap-3.5 border-b border-[#e6e8ed] bg-[#fafbfc] px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-[#6b7280]"
         >
           <div>ФИО</div>
           <div>Email</div>
           <div>Роль</div>
           <div>Последняя запись</div>
-          <div>Статус</div>
           <div class="text-right">Действия</div>
         </div>
 
         <div
           v-for="emp in employees"
-          :key="emp.email"
-          class="grid grid-cols-[1fr_230px_110px_130px_120px_150px] items-center gap-3.5 border-t border-[#f1f2f5] px-4 py-3 hover:bg-[#fafbfc]"
-          :class="{ 'bg-[#fbfbfc]': !emp.active }"
+          :key="emp.id"
+          class="grid grid-cols-[1fr_230px_110px_130px_150px] items-center gap-3.5 border-t border-[#f1f2f5] px-4 py-3 hover:bg-[#fafbfc]"
         >
           <!-- ФИО -->
           <div class="flex min-w-0 items-center gap-2.5">
             <div
-              class="flex h-7 w-7 flex-none items-center justify-center rounded-full text-[11px] font-semibold"
-              :class="emp.active ? 'bg-[#f8e8e6] text-brand' : 'bg-[#f1f2f5] text-[#9aa1ad]'"
+              class="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[#f8e8e6] text-[11px] font-semibold text-brand"
             >
               {{ emp.initials }}
             </div>
-            <div
-              class="truncate text-[13.5px] font-medium"
-              :class="{ 'text-[#9aa1ad]': !emp.active }"
-            >
+            <div class="truncate text-[13.5px] font-medium">
               {{ emp.name }}
             </div>
           </div>
@@ -72,22 +88,13 @@ const showEmployeeModal = ref(false)
             {{ emp.last }}
           </div>
 
-          <!-- Статус -->
-          <div class="flex items-center gap-1.5 text-[12.5px]">
-            <span
-              class="h-1.5 w-1.5 rounded-full"
-              :class="emp.active ? 'bg-[#1f9d55]' : 'bg-[#a8adb6]'"
-            ></span>
-            <span :class="emp.active ? 'text-[#1f7a4d]' : 'text-[#7a7f88]'">
-              {{ emp.active ? 'Активен' : 'Заблокирован' }}
-            </span>
-          </div>
-
           <!-- Действия -->
           <div class="flex justify-end gap-3">
-            <button class="text-[12.5px] text-[#6b7280] hover:text-brand">Изменить</button>
-            <button class="text-[12.5px] text-[#9aa1ad] hover:text-[#c8442f]">
-              {{ emp.active ? 'Заблокировать' : 'Разблокировать' }}
+            <button @click="openEdit(emp)" class="text-[12.5px] text-[#6b7280] hover:text-brand">
+              Изменить
+            </button>
+            <button @click="pwdFor = emp" class="text-[12.5px] text-[#6b7280] hover:text-brand">
+              Пароль
             </button>
           </div>
         </div>
@@ -95,5 +102,11 @@ const showEmployeeModal = ref(false)
     </div>
   </main>
 
-  <EmployeeModal v-if="showEmployeeModal" @close="showEmployeeModal = false" />
+  <EmployeeModal
+    v-if="showEmployeeModal"
+    :employee="editing ?? undefined"
+    @submit="onSubmit"
+    @close="showEmployeeModal = false"
+  />
+  <PasswordModal v-if="pwdFor" :employee="pwdFor" @submit="onPassword" @close="pwdFor = null" />
 </template>

@@ -3,50 +3,78 @@ import { defineStore } from 'pinia'
 import type { Employee } from '@/types/employee.ts'
 
 export const useEmployeesStore = defineStore('employees', () => {
-  // Демо-данные для вёрстки. `active: false` — заблокированный сотрудник.
-  // ref() обязателен: без него Pinia не считает это состоянием, и
-  // storeToRefs() во view просто не найдёт employees.
+  // Демо-данные для вёрстки. ref() обязателен: без него Pinia не считает это
+  // состоянием, и storeToRefs() во view просто не найдёт employees.
+  type NewEmployee = Pick<Employee, 'name' | 'email' | 'role'>
+  function addEmployee(data: NewEmployee) {
+    employees.value.push({
+      id: crypto.randomUUID(),
+      initials: initialsFrom(data.name),
+      ...data,
+      last: '—',
+    })
+  }
+  function updateEmployee(id: string, patch: Partial<NewEmployee>) {
+    const e = employees.value.find((x) => x.id === id)
+    if (!e) return
+    Object.assign(e, patch)
+    if (patch.name) e.initials = initialsFrom(patch.name)
+  }
+  function setPassword(id: string, password: string) {
+    // демо без бэка — пароли нигде не хранятся; заглушка под будущий API
+    console.info('setPassword (демо):', id, password.length + ' символов')
+  }
+  function initialsFrom(name: string): string {
+    return name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? '')
+      .join('')
+  }
+
   const employees = ref<Employee[]>([
     {
+      id: '1',
       initials: 'СА',
       name: 'Соколов Артём Игоревич',
       email: 'a.sokolov@kontur-group.ru',
       role: 'Сотрудник',
       last: '31.08.2026',
-      active: true,
     },
     {
+      id: '2',
       initials: 'МД',
       name: 'Мельникова Дарья Сергеевна',
       email: 'd.melnikova@kontur-group.ru',
       role: 'Сотрудник',
       last: '31.08.2026',
-      active: true,
     },
     {
+      id: '3',
       initials: 'ГН',
       name: 'Гаврилов Никита Павлович',
       email: 'n.gavrilov@kontur-group.ru',
       role: 'Сотрудник',
       last: '28.08.2026',
-      active: false,
     },
     {
+      id: '4',
       initials: 'ТО',
       name: 'Ткачук Ольга Владимировна',
       email: 'o.tkachuk@kontur-group.ru',
       role: 'Админ',
       last: '31.08.2026',
-      active: true,
     },
     {
+      id: '5',
       initials: 'ЕП',
       name: 'Ерёмин Павел Андреевич',
       email: 'p.eremin@kontur-group.ru',
       role: 'Сотрудник',
       last: '—',
-      active: true,
     },
   ])
-  return { employees }
+
+  return { employees, addEmployee, updateEmployee, setPassword }
 })
