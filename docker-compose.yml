@@ -1,8 +1,8 @@
 # ─────────────────────────────────────────────────────────────
 # Производственный стек: PostgreSQL + Redis + backend (NestJS) + frontend (Caddy).
-# Запуск:  docker compose up --build -d
-# Точка входа:  https://localhost:${HTTPS_PORT:-8443}
-#              (HTTP на :${HTTP_PORT:-8080} редиректит на HTTPS)
+# Деплой:  см. DEPLOY.md  (кратко: заполнить .env → docker compose run --rm
+#          migrate → docker compose up --build -d)
+# Точка входа:  https://${SITE_ADDRESS}  (Caddy сам выпускает Let's Encrypt-серт)
 # ─────────────────────────────────────────────────────────────
 name: meeymirita-feedback-platform-klite
 
@@ -18,7 +18,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
       TZ: ${TZ:-Europe/Moscow}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      # только localhost — БД не торчит в интернет на VPS
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - meeymirita_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -36,7 +37,7 @@ services:
     # appendonly — сессии переживают перезапуск; requirepass — пароль как в backend/.env
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-pass123456}"]
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - meeymirita_redisdata:/data
     healthcheck:
@@ -68,13 +69,42 @@ services:
       APPLICATION_URL: http://localhost:3000
       ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-https://meeymirita.localhost:8443}
       COOKIES_SECRET: ${COOKIES_SECRET:-dev_insecure_cookies_change_me}
+      # Сессия (express-session + connect-redis). Прод: SESSION_SECURE=true.
+      SESSION_SECRET: ${SESSION_SECRET:-dev_insecure_session_change_me}
+      SESSION_NAME: ${SESSION_NAME:-klite.sid}
+      SESSION_DOMAIN: ${SESSION_DOMAIN:-}
+      SESSION_MAX_AGE: ${SESSION_MAX_AGE:-30d}
+      SESSION_HTTP_ONLY: ${SESSION_HTTP_ONLY:-true}
+      SESSION_SECURE: ${SESSION_SECURE:-false}
+      SESSION_FOLDER: ${SESSION_FOLDER:-sessions:}
       # Хосты — имена сервисов compose; порты внутренние (5432 / 6379)
       POSTGRES_URI: postgresql://${POSTGRES_USER:-root}:${POSTGRES_PASSWORD:-123456}@postgres:5432/${POSTGRES_DB:-full-authorization}
       REDIS_URI: redis://default:${REDIS_PASSWORD:-pass123456}@redis:6379
     ports:
-      # Прямой доступ к API в обход Caddy — удобно для отладки/Postman
-      - "${APPLICATION_PORT:-3000}:3000"
+      # Прямой доступ к API в обход Caddy (только localhost — для отладки на сервере)
+      - "127.0.0.1:${APPLICATION_PORT:-3000}:3000"
     init: true
+    networks: [meeymirita-net]
+
+  # ── Миграция схемы + сид MIRA (одноразовый, вручную на деплое) ──
+  # Запуск:  docker compose run --rm migrate
+  # Идемпотентно: db push при неизменной схеме — no-op, сид — upsert.
+  migrate:
+    profiles: ["setup"] # не поднимается при обычном `docker compose up`
+    build:
+      context: ./backend
+      target: migrate
+    image: meeymirita/feedback-klite-migrate:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      TZ: ${TZ:-Europe/Moscow}
+      POSTGRES_URI: postgresql://${POSTGRES_USER:-root}:${POSTGRES_PASSWORD:-123456}@postgres:5432/${POSTGRES_DB:-full-authorization}
+      SEED_MIRA_EMAIL: ${SEED_MIRA_EMAIL:-}
+      SEED_MIRA_PASSWORD: ${SEED_MIRA_PASSWORD:-}
+      SEED_MIRA_NAME: ${SEED_MIRA_NAME:-mira}
     networks: [meeymirita-net]
 
   # ── Веб / реверс-прокси / TLS (Caddy) ─────────────────────
