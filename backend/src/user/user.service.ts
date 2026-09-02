@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { hash } from 'argon2';
 import { UserRole } from '@/generated/prisma/enums';
@@ -42,5 +46,41 @@ export class UserService {
       },
       omit: { password: true },
     });
+  }
+
+  findAll() {
+    return this.prisnaService.user.findMany({
+      where: { role: { not: UserRole.MIRA } },
+      omit: { password: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+  async updateProfile(
+    id: string,
+    data: { displayName?: string; role?: UserRole },
+  ) {
+    await this.assertEditable(id);
+    // берём только разрешённые поля (undefined Prisma игнорирует)
+    return this.prisnaService.user.update({
+      where: { id },
+      data: { displayName: data.displayName, role: data.role },
+      omit: { password: true },
+    });
+  }
+
+  async setPassword(id: string, password: string) {
+    await this.assertEditable(id);
+    return this.prisnaService.user.update({
+      where: { id },
+      data: { password: await hash(password) },
+      omit: { password: true },
+    });
+  }
+
+  private async assertEditable(id: string) {
+    const user = await this.prisnaService.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('Пользователь не найден');
+    if (user.role === UserRole.MIRA)
+      throw new ForbiddenException('Владельца менять нельзя');
   }
 }
