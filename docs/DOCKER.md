@@ -377,7 +377,7 @@ Node `^22.18 || >=24.12` — тег `node:22-alpine` этому удовлетв
 {$SITE_ADDRESS:localhost} {
 	encode zstd gzip
 
-	handle_path /api/* {
+	handle /api/* {
 		reverse_proxy backend:3000
 	}
 
@@ -408,11 +408,13 @@ Node `^22.18 || >=24.12` — тег `node:22-alpine` этому удовлетв
   Отдельного `tls`-блока не нужно — HTTPS «из коробки». HTTP-порт при этом
   автоматически отдаёт 308-редирект на HTTPS.
 - **`encode zstd gzip`** — сжатие ответов; клиенту с поддержкой zstd отдаётся zstd, иначе gzip.
-- **`handle_path /api/* { reverse_proxy backend:3000 }`** — прокси на API.
-  `handle_path` (в отличие от `handle`) **срезает** совпавший префикс:
-  `/api/auth/login` уходит на `http://backend:3000/auth/login` (эндпоинты из
-  п. 5 ТЗ — без `/api`). `backend` резолвится через DNS сети compose. Caddy сам
-  проставляет `X-Forwarded-For` / `X-Forwarded-Proto` и умеет WebSocket.
+- **`handle /api/* { reverse_proxy backend:3000 }`** — прокси на API.
+  `handle` (в отличие от `handle_path`) префикс **не срезает**: на бэке стоит
+  `app.setGlobalPrefix('api/v1')` (`backend/src/main.ts`), поэтому путь сквозной —
+  `/api/v1/auth/login` уходит на `http://backend:3000/api/v1/auth/login`. Один и
+  тот же URL у браузера, Caddy и NestJS. `backend` резолвится через DNS сети
+  compose. Caddy сам проставляет `X-Forwarded-For` / `X-Forwarded-Proto` и умеет
+  WebSocket.
 - **`handle { … }`** — всё, что не `/api/*`:
   - `root * /srv` — корень статики (туда стадия `production` кладёт `dist`).
   - `try_files {path} /index.html` — SPA-fallback: есть файл — отдаём его, нет —

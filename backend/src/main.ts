@@ -22,6 +22,10 @@ async function bootstrap() {
     app.set('trust proxy', 1);
   }
 
+  // Все роуты под /api/v1/*. Caddy проксирует /api/* на backend без среза
+  // префикса (handle, не handle_path) — путь одинаков у браузера и бэка.
+  app.setGlobalPrefix('api/v1');
+
   const redis = createClient({ url: config.getOrThrow('REDIS_URI') });
   await redis.connect();
 
@@ -57,7 +61,6 @@ async function bootstrap() {
       }),
     }),
   );
-
   app.enableCors({
     origin: config.getOrThrow<string>('ALLOWED_ORIGIN'),
     credentials: true,

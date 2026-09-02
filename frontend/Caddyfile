@@ -9,9 +9,10 @@
 	# Сжатие ответов (zstd для поддерживающих, иначе gzip)
 	encode zstd gzip
 
-	# /api/* → backend:3000, префикс /api снимается handle_path'ом:
-	#   /api/auth/login → GET http://backend:3000/auth/login
-	handle_path /api/* {
+	# /api/* → backend:3000 БЕЗ среза префикса (handle, не handle_path).
+	# На бэке глобальный префикс api/v1 (main.ts), путь сквозной:
+	#   /api/v1/auth/login → GET http://backend:3000/api/v1/auth/login
+	handle /api/* {
 		reverse_proxy backend:3000
 	}
 
