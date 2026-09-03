@@ -1,66 +1,172 @@
 # feedback-platform-klite
 
-Мини-платформа для ежедневной и еженедельной отчётности сотрудников: каждый
-сотрудник фиксирует задачи за день (проект, ссылка, что сделал, время), а система
-собирает их в недельный отчёт с выгрузкой в Excel.
+Мини-платформа для ежедневной и еженедельной отчётности сотрудников: сотрудник
+фиксирует задачи за день (направление, ссылка, что сделал, время), а руководитель
+(ADMIN / MIRA) видит недельный отчёт по каждому и сводку по всем.
 
-**Стек:** Vue 3 + TypeScript · NestJS + TypeScript · PostgreSQL · Docker · Caddy
+**Статус:** `v1.0.0` — боевой релиз, одобрен заказчиком, развёрнут на VPS
+(`meeymirita.ru`, Docker + Caddy). Дальнейшие улучшения — после этого тега.
+
+**Стек:** Vue 3 + Pinia + Tailwind v4 · NestJS 11 · PostgreSQL 16 + Prisma 7 ·
+Redis 7 (сессии) · Docker Compose · Caddy 2 (SPA + reverse-proxy + авто-TLS)
+
+---
+
+## Что умеет (v1.0.0)
+
+| Раздел | Кто | Готово |
+| --- | --- | --- |
+| Вход по email/паролю, сессия в Redis | все | ✅ |
+| Мои записи — CRUD задач за день | залогиненный | ✅ |
+| Недельный отчёт — свои записи по дням недели | залогиненный | ✅ |
+| Сотрудники — создание USER/ADMIN, правка роли/имени, сброс пароля | ADMIN / MIRA | ✅ |
+| Сводный отчёт по всем за неделю + drill-down в отчёт сотрудника | ADMIN / MIRA | ✅ |
+| Выгрузка в Excel | ADMIN / MIRA | ⏳ кнопки-заглушки, экспорт не реализован |
+| Мобильная вёрстка | — | ⏳ только ПК |
+| Автотесты | — | ⏳ нет |
+
+**Регистрации нет** — аккаунты заводит ADMIN/MIRA. `MIRA` — единственный владелец,
+создаётся сидом (`SEED_MIRA_*`), второго завести нельзя.
+
+**Роли:** `USER` (свои записи + свой недельный отчёт), `ADMIN` (то же + сотрудники
++ сводка), `MIRA` (как ADMIN, неудаляем, один на систему).
+
+Нюанс: роль в открытой сессии не меняется на лету — пользователь увидит новую роль
+после релогина / F5.
+
+---
+
+## API
+
+Все маршруты под `/api/v1`. Аутентификация — cookie-сессия (`express-session` +
+`connect-redis`), не JWT. Пароль наружу не отдаётся никогда.
+
+| Метод | Путь | Доступ | Назначение |
+| --- | --- | --- | --- |
+| `POST` | `/auth/login` | гость | вход → `{ user }`, единый `401` на неверный email или пароль |
+| `POST` | `/auth/logout` | сессия | выход, чистит куку и ключ в Redis |
+| `GET` | `/users/profile` | сессия | текущий пользователь, `401` без сессии |
+| `GET` | `/users` | ADMIN / MIRA | список пользователей (без MIRA) |
+| `POST` | `/users/create-user` | ADMIN / MIRA | создать USER или ADMIN |
+| `PATCH` | `/users/:id` | ADMIN / MIRA | сменить `displayName` / роль (email неизменяем; цель-MIRA → 403) |
+| `PATCH` | `/users/:id/password` | ADMIN / MIRA | сброс пароля |
+| `GET` | `/report-entries?from&to` | сессия | свои записи за период |
+| `POST` | `/report-entries` | сессия | создать запись (автор — из сессии) |
+| `PATCH` | `/report-entries/:id` | сессия | правка своей записи |
+| `DELETE` | `/report-entries/:id` | сессия | удаление своей записи |
+| `GET` | `/reports/summary?from&to` | ADMIN / MIRA | сводка по всем сотрудникам за период |
+| `GET` | `/reports/entries?userId&from&to` | ADMIN / MIRA | записи конкретного сотрудника (просмотр чужого отчёта) |
+
+Недельные суммы считаются на лету из выборки записей — отдельной таблицы отчёта нет.
+
+---
+
+## Модель данных
+
+```
+User(id, email✱, password, displayName, role[USER|ADMIN|MIRA], createdAt, updatedAt)
+ReportEntry(id, userId→User, date, domain, link, description, minutes, createdAt, updatedAt)
+  onDelete: Cascade,  @@index([userId, date])
+```
+
+Схема накатывается через `prisma db push` (без миграций). Prisma 7: URL БД — не в
+схеме, а в `prisma.config.ts` (CLI) и через `@prisma/adapter-pg` (рантайм).
+Клиент генерится в `src/generated/prisma` (в git не коммитится).
+
+---
 
 ## Документация
 
 | Файл | О чём |
 | --- | --- |
-| [`docs/TZ.md`](docs/TZ.md) | Техническое задание (исходный текст заказчика, v1.0) |
-| [`docs/PLAN.md`](docs/PLAN.md) | **С чего начать** — пошаговый план разработки от скелета до MVP |
-| [`docs/DOCKER.md`](docs/DOCKER.md) | Построчная документация по всем Docker-файлам |
-| [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | Все библиотеки проекта с версиями и назначением |
-| [`docs/FRONTEND_STRUCTURE.md`](docs/FRONTEND_STRUCTURE.md) | Структура папок `frontend/src/` — что куда класть |
+| [`DEPLOY.md`](DEPLOY.md) | **Деплой на VPS** — пошагово: сервер, `.env`, первый запуск, обновление, бэкапы |
+| [`docs/TZ.md`](docs/TZ.md) | Техническое задание заказчика |
+| [`docs/PLAN.md`](docs/PLAN.md) | Исторический план разработки (описывает JWT-дизайн, который в итоге не взяли — победили сессии) |
+| [`docs/CHECKLIST.md`](docs/CHECKLIST.md) | Чек-лист готовности |
+| [`docs/PRISMA.md`](docs/PRISMA.md) | Работа с Prisma в проекте (db push, генерация, сид) |
+| [`docs/DOCKER.md`](docs/DOCKER.md) | Построчный разбор Docker-файлов |
+| [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | Библиотеки с версиями и назначением |
+| [`docs/FRONTEND_STRUCTURE.md`](docs/FRONTEND_STRUCTURE.md) | Структура `frontend/src/` |
 
-## Структура
+---
+
+## Структура репозитория
 
 ```
 .
-├── backend/                 — NestJS API
-│   ├── Dockerfile           — multi-stage: deps → development → build → production
-│   └── .dockerignore
-├── frontend/                — Vue 3 SPA
-│   ├── Dockerfile           — multi-stage: production на caddy:2-alpine
-│   ├── Caddyfile            — раздача SPA + прокси /api + авто-HTTPS
-│   └── .dockerignore
-├── docker-compose.yml       — прод-стек: postgres + backend + frontend (Caddy)
-├── docker-compose.dev.yml   — overlay для разработки (watch/HMR, bind-mount)
-├── .env.example             — образец переменных окружения
-├── docs/                    — TZ, PLAN, DOCKER, DEPENDENCIES, FRONTEND_STRUCTURE
-└── README.md
+├── backend/                  — NestJS API (auth, user, report-entry)
+│   ├── Dockerfile            — multi-stage: deps → development → build → migrate → production
+│   ├── prisma/               — schema.prisma + seed.ts
+│   └── .env.example
+├── frontend/                 — Vue 3 SPA
+│   ├── Dockerfile            — multi-stage: production на caddy:2-alpine
+│   └── Caddyfile             — раздача SPA + прокси /api/* + авто-HTTPS
+├── docker-compose.yml        — прод-стек: postgres + redis + backend + frontend + (профиль) migrate
+├── docker-compose.dev.yml    — overlay для разработки (watch/HMR, bind-mount)
+├── .env.example              — переменные для docker compose (корневой .env читает ТОЛЬКО compose)
+├── DEPLOY.md
+└── docs/
 ```
 
-## Запуск в Docker
+---
+
+## Запуск
+
+### Прод-стек локально (как на сервере)
 
 ```bash
-cp .env.example .env          # заполнить пароли и JWT-секреты
+cp .env.example .env          # заполнить пароли и секреты (openssl rand -hex 32)
+                              # комментарии в .env — только на отдельной строке!
 
-# Прод: postgres + backend (NestJS) + frontend (Caddy, HTTPS автоматически)
-docker compose up --build -d
-#   → https://localhost:8443            (HTTP :8080 редиректит на HTTPS)
-
-# Разработка: авто-перезапуск backend, HMR фронта, исходники с хоста
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
-#   → http://localhost:8080
+docker compose build
+docker compose up -d postgres redis
+docker compose run --rm migrate          # схема в БД + сид пользователя MIRA (идемпотентно)
+docker compose up -d
+#   → https://localhost:8443   (HTTP :8080 редиректит на HTTPS; внутренний CA Caddy)
 ```
 
 Точка входа — контейнер **Caddy**: отдаёт собранный SPA, проксирует `/api/*` на
-backend и сам поднимает HTTPS (внутренний CA для `localhost` / `*.localhost`,
-Let's Encrypt для реального домена — через `SITE_ADDRESS` в `.env`).
-Подробности и разбор каждого файла — в [`docs/DOCKER.md`](docs/DOCKER.md).
+`backend:3000` (без среза префикса) и сам поднимает HTTPS. Домен и режим TLS
+задаёт `SITE_ADDRESS`: `localhost`/`*.localhost`/IP → внутренний CA, реальный
+домен → Let's Encrypt.
 
-## Разработка без Docker
+Боевой деплой на VPS — см. [`DEPLOY.md`](DEPLOY.md).
+
+### Разработка (watch + HMR в контейнерах)
 
 ```bash
-# backend
-cd backend && npm install && npm run start:dev      # http://localhost:3000
-
-# frontend
-cd frontend && npm install && npm run dev           # http://localhost:5173
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#   → http://localhost:8080   (Vite dev-server, без TLS; backend с авто-перезапуском)
 ```
 
-Нужен запущенный PostgreSQL (можно поднять только его: `docker compose up -d postgres`).
+### Разработка без Docker
+
+```bash
+# нужны запущенные Postgres и Redis:
+docker compose up -d postgres redis
+
+# backend
+cd backend
+cp .env.example .env          # заполнить, в т.ч. SEED_MIRA_* ; хосты — localhost
+npm install
+npx prisma db push && npx prisma generate && npm run seed
+npm run start:dev             # http://localhost:3000
+
+# frontend (в другом терминале)
+cd frontend
+npm install
+npm run dev                   # http://localhost:5173, /api проксируется на :3000
+```
+
+> В Docker (`NODE_ENV=production`) backend `backend/.env` **не читает** — переменные
+> приходят из блока `environment:` сервиса. `backend/.env` нужен только для
+> `npm run start:dev` на хосте.
+
+---
+
+## Разработка: процесс
+
+- Каждая фича — своя ветка; по готовности `git merge --no-ff` в `main` + push,
+  ветки не удаляем.
+- БД — `prisma db push`, миграций нет.
+- Линт/формат: `npm run lint` / `npm run format` (backend), `npm run lint` (frontend).
