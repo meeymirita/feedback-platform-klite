@@ -56,6 +56,10 @@ openssl rand -hex 24   # → POSTGRES_PASSWORD / REDIS_PASSWORD
 - `SESSION_SECURE=true`
 - `SEED_MIRA_EMAIL` / `SEED_MIRA_PASSWORD` — логин и пароль владельца
 
+Комментарии в `.env` — **только на отдельной строке**. Хвостовой
+`SESSION_DOMAIN=   # текст` docker compose при пустом значении затягивает
+комментарий внутрь переменной → backend падает на выдаче куки.
+
 `.env` в git не коммитится — он только на сервере.
 
 ---
@@ -128,4 +132,5 @@ cat backup.sql | docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$P
 | Caddy не выдаёт серт, в логах ACME-ошибка | DNS ещё не разошёлся, или 80/443 закрыты фаерволом |
 | `502` на `/api/*` | backend не поднялся — `docker compose logs backend` (частая причина — не заполнен `.env`) |
 | Логин не проходит, куки нет | `SESSION_SECURE=true`, но зашёл по `http://` — заходи по `https://` |
+| `TypeError: option domain is invalid` в логах backend при логине | хвостовой `# комментарий` в строке `SESSION_DOMAIN=` — вынести комментарий на строку выше, `docker compose up -d --force-recreate backend` |
 | `migrate` падает | не задан `SEED_MIRA_EMAIL` / `SEED_MIRA_PASSWORD`, либо Postgres не готов |
