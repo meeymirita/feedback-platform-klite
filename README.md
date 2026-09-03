@@ -75,21 +75,6 @@ ReportEntry(id, userId→User, date, domain, link, description, minutes, created
 
 ---
 
-## Документация
-
-| Файл | О чём |
-| --- | --- |
-| [`DEPLOY.md`](DEPLOY.md) | **Деплой на VPS** — пошагово: сервер, `.env`, первый запуск, обновление, бэкапы |
-| [`docs/TZ.md`](docs/TZ.md) | Техническое задание заказчика |
-| [`docs/PLAN.md`](docs/PLAN.md) | Исторический план разработки (описывает JWT-дизайн, который в итоге не взяли — победили сессии) |
-| [`docs/CHECKLIST.md`](docs/CHECKLIST.md) | Чек-лист готовности |
-| [`docs/PRISMA.md`](docs/PRISMA.md) | Работа с Prisma в проекте (db push, генерация, сид) |
-| [`docs/DOCKER.md`](docs/DOCKER.md) | Построчный разбор Docker-файлов |
-| [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | Библиотеки с версиями и назначением |
-| [`docs/FRONTEND_STRUCTURE.md`](docs/FRONTEND_STRUCTURE.md) | Структура `frontend/src/` |
-
----
-
 ## Структура репозитория
 
 ```
